@@ -1,0 +1,3 @@
+#ID	ParentID	TypeID	Label
+1	NaN	1	
+2	NaN 1	

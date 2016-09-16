@@ -1,0 +1,6 @@
+/VikingPlot/
+*.m~
+*.mat
+*.dae
+*.c
+*.exe
