@@ -9,7 +9,7 @@ classdef MaterialManager
     methods
         
         function obj = MaterialManager()
-           obj.MaterialsTable.put('White', [0 0 0]);
+           obj.MaterialsTable.put('White', [0 0 0 1]);
         end
         
         %Add a material to the list if it doesn't already exist
@@ -181,7 +181,7 @@ classdef MaterialManager
         function LambertNode = CreateLambertNode(obj, DOM, MaterialName)
             
             data = obj.MaterialsTable.get(MaterialName);
-            Color = data(1:3); 
+            Color = data(1:4);
              
             LambertNode = DOM.createElement('lambert');
             
