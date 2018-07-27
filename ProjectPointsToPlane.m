@@ -3,7 +3,7 @@ function [ V2D ] = ProjectPointsToPlane( Normal, V )
 %   project the points to the 2D plane
 
 %Find the largest component of the Normal.  This is the axis we will ignore
-[maxVal, iMax] = max(Normal);
+[~, iMax] = max(Normal);
 iV = [1 2 3] ~= iMax;
 
 V2D = V(:,iV); 

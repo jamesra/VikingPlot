@@ -1,7 +1,7 @@
 function VikingPlot( varargin ) 
 
     disp('');
-    disp('Version: 1.0.2016.09.15');
+    disp('Version: 1.0.2017.02.20');
     disp('');
 
     dbstop if error
@@ -204,12 +204,12 @@ function VikingPlot( varargin )
       [Structs, Locs, LocLinks] = IO.DB.FetchData(Server, Port, Database, CellIDs);
     end
     
-    if(length(Structs) == 1)
+    if(isempty(Structs))
         disp(['No structure data returned by server']);
         return 
     end
     
-    if(length(Locs) == 1)
+    if(isempty(Locs))
         disp(['No location data returned by server']);
         return 
     end

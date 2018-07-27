@@ -1,8 +1,8 @@
 %TypeID Red Green Blue Alpha
 3 1 0 0 0.5 %Blood Vessel
 28 1 1 0 0.5  %Gap junction
+34 1 0 0 0.5  %Conventional Presynapse
 35 .051 .027 .549 0.5 %Postsynapse
-34 0 0 1 0.5  %Conventional Presynapse
 73 0 .580 .267 0.5 %Ribbon
 81 0 0 1 0.5 %Organized SER
 85 1 1 1 0.5 %Adherens

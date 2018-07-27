@@ -1,14 +1,15 @@
 classdef LinkGraph
-    %UNTITLED Summary of this class goes here
-    %   Detailed explanation goes here
+    %LinkGraph: A graph with locations as nodes and location links as edges
     
     properties
         Valid = 0; 
-        
     end
     
     methods
     end
     
+    function obj = LinkGraph( Loc_data, LocLink_data)
+        
+    end
 end
 

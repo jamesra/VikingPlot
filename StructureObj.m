@@ -1,15 +1,9 @@
-classdef StructureObj 
+classdef StructureObj < handle
 %LOCATIONOBJ - Manages 3D information for one structurse
     
     properties
-        %ID of the structure this represents;
-        StructureID = []; 
-        TypeID =[]; 
-        ParentID = []; 
-        Label = [];
-        
         %Locations used to draw this object
-        Locs = [];
+        Structure = []
         
         Verts = [];
         Normals = []; 
@@ -53,9 +47,15 @@ classdef StructureObj
         ChildList = []; %StructureID of objects which are children of this structure
     end
     
-    properties (SetAccess = private)
+    properties (SetAccess = protected )
+        StructureID; 
+        TypeID; 
+        ParentID;
+        Label;
+        
         HasParent;
-        NumLocs;
+        NumLocs; 
+        Locs; 
     end
         
     properties (Constant = true)
@@ -89,20 +89,16 @@ classdef StructureObj
     
     
     methods
-        function obj = StructureObj( Locs, color, alpha, MatName, typeID, parentID, Label)
-            obj.TypeID = typeID;
-            obj.Label = Label;
-            obj.ParentID = parentID; 
-            obj.Locs = Locs; 
+        function obj = StructureObj( structure_data, color, alpha, MatName)
+            obj.Structure = structure_data;
             obj.Color = color; 
             obj.Alpha = alpha;
-            obj.StructureID = Locs(1, obj.iParentID); 
             obj.MaterialName = MatName; 
             obj.ColladaStructName = ['Struct-' num2str(obj.StructureID)];
             obj.ColladaMaterialName = MatName; %[obj.ColladaStructName '-material']; 
             
             %Walk the array and create verticies for all Locs
-            numLocs = size(Locs,1);
+            numLocs = obj.NumLocs;
             
             obj.Links = cell(numLocs, 1); 
             obj.BadLinks = cell(numLocs, 1);
@@ -122,9 +118,29 @@ classdef StructureObj
             obj.MapIDToIndex = zeros(numLocs,3);
             
             for iLoc = 1:numLocs
-               ID = Locs(iLoc, obj.iID);
+               ID = obj.Locs.ID(iLoc);
                obj.MapIDToIndex(iLoc,1) = ID;
             end
+        end
+        
+        function StructureID = get.StructureID(obj)
+            StructureID = obj.Structure.ID;
+        end
+        
+        function TypeID = get.TypeID(obj)
+            TypeID = obj.Structure.TypeID;
+        end
+        
+        function ParentID = get.ParentID(obj)
+            ParentID = obj.Structure.ParentID;
+        end
+        
+        function Label = get.Label(obj)
+            Label = obj.Structure.Label;
+        end
+        
+        function obj = set.Label(obj, value)
+            obj.Structure.Label = value;
         end
         
         function hasParent = get.HasParent(obj)
@@ -133,12 +149,37 @@ classdef StructureObj
         end
         
         function numLocs = get.NumLocs(obj)
-           numLocs = size(obj.Locs,1);
+           numLocs = size(obj.Locs.ID,1);
            return;
         end
         
+        function Locs = get.Locs(obj)
+           Locs = obj.Structure.Locations;
+           return;
+        end
+        
+        function obj = set.Locs(obj, value)
+           obj.Structure.Locations = value;
+           return;
+        end
+                
         function obj = AddChildStructure(obj, ChildObj)
            obj.ChildList = [obj.ChildList ChildObj.StructureID];
+        end
+        
+        function [X,Y,Z] = GetPosition(obj, iLoc)
+           X = obj.Locs.X(iLoc) * obj.nmPerPixel;
+           Y = obj.Locs.Y(iLoc) * obj.nmPerPixel;
+           Z = obj.Locs.Z(iLoc) * obj.nmPerSection; 
+        end
+        
+        function [X,Y,Z,Radius] = GetPositionAndRadius(obj, iLoc)
+           [X,Y,Z] = obj.GetPosition(iLoc);
+           Radius = obj.Locs.Radius(iLoc) * obj.nmPerPixel;
+        end
+        
+        function DisplayPosition(obj, iLoc)
+            disp(['X: ' num2str(obj.Locs.X(iLoc)) ' Y: ' num2str(obj.Locs.Y(iLoc)) ' Z: ' num2str(obj.Locs.Z(iLoc)) ' Radius: ' num2str(obj.Locs.Radius(iLoc))]);
         end
        
         %Create faces to render the link between location IDs A & B
@@ -204,7 +245,7 @@ classdef StructureObj
         
         function obj = CullVeryLongLinks(obj)
             
-            numLocs = obj.NumLocs
+            numLocs = obj.NumLocs;
             [numLinks,~] = size(obj.Links);
             
             if(numLinks == 0)
@@ -222,50 +263,52 @@ classdef StructureObj
                 objLinks = obj.Links{iObj}; 
                 
                 iObjA = iObj;
-                XA = obj.Locs(iObjA, obj.iX) * obj.nmPerPixel;
-                YA = obj.Locs(iObjA, obj.iY) * obj.nmPerPixel;
-                ZA = obj.Locs(iObjA, obj.iZ) * obj.nmPerSection;
-               
-                [numObjLinks,~] = size(objLinks);
+                iObjB = objLinks(:,1);
+                iObjB = iObjB( iObjB < iObjA); %Remove objects with an ID number less than ours, prevents duplicate measurement.  Duplicates throw off std deviation.
                 
-                for(iLinkB = 1:numObjLinks)
-                    iObjB = objLinks(iLinkB,1);
-                    
-                    XB = obj.Locs(iObjB, obj.iX) * obj.nmPerPixel;
-                    YB = obj.Locs(iObjB, obj.iY) * obj.nmPerPixel;
-                    ZB = obj.Locs(iObjB, obj.iZ) * obj.nmPerSection;
-                    
-                    %Get the coordinates of the locations and calculate the
-                    %distance
-                    if(iObjB <= iObjA)
-                        continue;
-                    end
-                    
-                    DistanceMatrix(iObjA, iObjB) = pdist([XA YA ZA; 
-                                                          XB YB ZB]); 
-                        
-                    TotalLinks = TotalLinks + 1; 
+                if isempty(iObjB)
+                    continue;
                 end
                 
+                [XA, YA, ZA] = obj.GetPosition(iObjA);
+                [XB, YB, ZB] = obj.GetPosition(iObjB);
+               
+                [numObjLinks,~] = size(iObjB);
+                DistanceMatrix(iObjA, iObjB) = pdist2([XA YA ZA], [XB YB ZB]);
+%                 
+%                 %TODO, this should not be in a for loop
+%                 for(iLinkB = 1:numObjLinks)
+%                     iObjB = objLinks(iLinkB,1);
+%                     
+%                     %Get the coordinates of the locations and calculate the
+%                     %distance
+%                     if(iObjB <= iObjA)
+%                         continue;
+%                     end
+%                     
+%                     DistanceMatrix(iObjA, iObjB) = pdist([XA YA ZA; 
+%                                                           XB YB ZB]); 
+%                 end
+                
             end
-            
             
             %%Determine median and standard deviation of link length
             Distances = full(DistanceMatrix(DistanceMatrix > 0));
             distStd = std(Distances);
             distMedian = median(Distances); 
             
-            
             iOutliers = abs( Distances - distMedian) > (distStd*3.5);
             
             if(sum(iOutliers) > 0)
-                
                disp('*** Found extreme distance between two linked locations ***');
                disp(['Std. Dev.: ' num2str(distStd)]);
                disp(['Median   : ' num2str(distMedian)]);
                %disp(Distances(iOutliers > 0));
             end
             
+            %TODO: Remove the outliers
+                        
+                        
         end
 
         
@@ -344,9 +387,11 @@ classdef StructureObj
             return;
         end
         
+       
         function obj = CullOverlapping(obj, iObjs, iExclude)
-            
-            
+            %Remove locations with two links (part of a process) who
+            %overlap with adjacent locations.  Do not remove endpoints or
+            %branch points. 
             for(i = 1:length(iObjs))
                iLoc = iObjs(i);
              
@@ -359,10 +404,7 @@ classdef StructureObj
                     continue; 
                end
                
-               X = obj.Locs(iLoc, obj.iX) * obj.nmPerPixel;
-               Y = obj.Locs(iLoc, obj.iY) * obj.nmPerPixel;
-               Z = obj.Locs(iLoc, obj.iZ) * obj.nmPerSection;
-               Radius = obj.Locs(iLoc, obj.iRadius) * obj.nmPerPixel;
+               [X, Y, Z, Radius] = obj.GetPositionAndRadius(iLoc); 
                
                iIdenticalTest = intersect(iLinked, iExclude);
                iLinked = setdiff(iLinked, iExclude);
@@ -372,56 +414,27 @@ classdef StructureObj
                
                if(~isempty(iIdenticalTest))
                    for iLink = length(iIdenticalTest)
-                       AX = obj.Locs(iIdenticalTest(iLink), obj.iX) * obj.nmPerPixel;
-                       AY = obj.Locs(iIdenticalTest(iLink), obj.iY) * obj.nmPerPixel;
-                       AZ = obj.Locs(iIdenticalTest(iLink), obj.iZ) * obj.nmPerSection;
+                       [AX,AY,AZ] = obj.GetPosition(iLink);
 
                        if(X == AX && Y == AY && Z == AZ)
                            %FindGoodLinks(obj, iLoc, iExcludeLocs, KnownGoodLinks, iSearched)
-                           NewLinks = FindGoodLinks(obj, iIdenticalTest(iLink), [iLoc], setdiff(iIdenticalTest, iIdenticalTest(iLink)), []);
-                           obj.Links{iIdenticalTest(iLink)} = NewLinks;
-                           obj.LocLinkCount(iIdenticalTest(iLink)) = size(NewLinks,1);          
-
-           %                disp(['Loc: ' num2str(iLoc)]);
-           %                disp(['Links: ' num2str(obj.Links{iLoc})]);
-           %Update the other links to point to the new location
-
-                           for iLinkUpdate = 1:length(iIdenticalTest)
-                                if(iIdenticalTest(iLinkUpdate) == iIdenticalTest(iLink))
-                                    continue; 
-                                end
-
-                                %FindGoodLinks(obj, iLoc, iExcludeLocs, KnownGoodLinks, iSearched)
-                                UpdatedLinks = obj.Links{iIdenticalTest(iLinkUpdate)}(:,1);
-                                UpdatedLinks = setdiff(UpdatedLinks, iLoc);
-                                UpdatedLinks = [UpdatedLinks; iIdenticalTest(iLink)];
-                                UpdatedLinks = cat(2, UpdatedLinks, zeros(length(UpdatedLinks),2));
-
-                                obj.Links{iIdenticalTest(iLinkUpdate)} = UpdatedLinks;
-                                obj.LocLinkCount(iIdenticalTest(iLinkUpdate)) = size(UpdatedLinks,1);                     
-                           end
-
-                           obj.BadLocs(iLoc) = true; %Skip this location
-                           obj.LocLinkCount(iLoc) = 0; 
-                           obj.Links{iLoc} = []; 
+                           RemoveLocation(obj, iLink);
                            break;
                        end
                    end
                end
                
-               %If we've been found to be redundant, stop.
+               %Do not bother checking locations we've already marked as bad, stop.
                if(obj.BadLocs(iLoc))
                    continue;
                end
-               
+                              
                LinkVerts = zeros(length(iLinked), 3);
                minLinkDistance = 10^100;
                
                for iLink = 1:length(iLinked)
-                   AX = obj.Locs(iLinked(iLink), obj.iX) * obj.nmPerPixel;
-                   AY = obj.Locs(iLinked(iLink), obj.iY) * obj.nmPerPixel;
-                   AZ = obj.Locs(iLinked(iLink), obj.iZ) * obj.nmPerSection;
-                   ARadius = obj.Locs(iLinked(iLink), obj.iRadius) * obj.nmPerPixel;
+                   iAdjacentLoc = iLinked(iLink);
+                   [AX,AY,AZ, ARadius] = obj.GetPositionAndRadius(iAdjacentLoc);
 
                    LinkVerts(iLink,:) = [AX AY AZ]; 
                    %distance = pdist([X Y Z; AX AY AZ]);
@@ -438,63 +451,44 @@ classdef StructureObj
                    if(Adistance < max(ARadius,Radius))
                        %Keep the larger of the two radii,
                        %TODO, linear interpolation of the radius...
-                       obj.Locs(iLinked(iLink), obj.iRadius) = mean([ARadius Radius]);
-                       %FindGoodLinks(obj, iLoc, iExcludeLocs, KnownGoodLinks, iSearched)
-                       NewLinks = FindGoodLinks(obj, iLinked(iLink), [iLoc], setdiff(iLinked, iLinked(iLink)), []);
-                       obj.Links{iLinked(iLink)} = NewLinks;
-                       obj.LocLinkCount(iLinked(iLink)) = size(NewLinks,1);          
+                       %obj.Locs.Radius(iLoc) = mean([ARadius Radius]);
                        
-       %                disp(['Loc: ' num2str(iLoc)]);
-       %                disp(['Links: ' num2str(obj.Links{iLoc})]);
-       %Update the other links to point to the new location
-       
-                       for(iLinkUpdate = 1:length(iLinked))
-                            if(iLinked(iLinkUpdate) == iLinked(iLink))
-                                continue; 
-                            end
-                            
-                            %FindGoodLinks(obj, iLoc, iExcludeLocs, KnownGoodLinks, iSearched)
-                            UpdatedLinks = obj.Links{iLinked(iLinkUpdate)}(:,1);
-                            UpdatedLinks = setdiff(UpdatedLinks, iLoc);
-                            UpdatedLinks = [UpdatedLinks; iLinked(iLink)];
-                            UpdatedLinks = cat(2, UpdatedLinks, zeros(length(UpdatedLinks),2));
-                            
-                            obj.Links{iLinked(iLinkUpdate)} = UpdatedLinks;
-                            obj.LocLinkCount(iLinked(iLinkUpdate)) = size(UpdatedLinks,1);                     
+                       numLinksOnAdjacent = length(obj.Links{iAdjacentLoc}(:,1));
+                       if numLinksOnAdjacent == 2
+                           obj.RemoveLocation(iAdjacentLoc);
+                       elseif (numLinksOnAdjacent == 1 || numLinksOnAdjacent > 2)
+                           %We shouldn't remove terminals or endpoints.  So
+                           %remove ourselves
+                           obj.RemoveLocation(iLoc);
+                           break;  
                        end
-                       
-                       obj.BadLocs(iLoc) = true; %Skip this location
-                       obj.LocLinkCount(iLoc) = 0; 
-                       obj.Links{iLoc} = []; 
-                       break;
                    end
                end
                
                if(length(iLinked) == 2 && obj.BadLocs(iLoc) == false)
 
-                   LinkDistance = pdist(LinkVerts);
-
-
-                   %Remove the locaiton if the linked locations are closer
+                   LinkDistance = pdist(LinkVerts); 
+                   
+                   %Remove the location if the linked locations are closer
                    %together than this location is to the linked point, this is
                    %my primitive outlier detector
                    if(min(LinkDistance) < minLinkDistance)
 
-                       for iLinkUpdate = 1:length(iLinked)
-                            %FindGoodLinks(obj, iLoc, iExcludeLocs, KnownGoodLinks, iSearched)
-                                NewLinks = FindGoodLinks(obj, iLinked(iLinkUpdate), [iLinked(iLinkUpdate); iLoc], setdiff(iLinked, iLinked(iLinkUpdate)), []);
-                                obj.Links{iLinked(iLinkUpdate)} = NewLinks;
-                                obj.LocLinkCount(iLinked(iLinkUpdate)) = size(NewLinks,1);                     
-                       end
-
-    %                   obj.Links{iLoc} = []; 
-                       obj.BadLocs(iLoc) = true; %Skip this location
+                       RemoveLocation(obj, iLoc);
+%                        
+%                        for iLinkUpdate = 1:length(iLinked)
+%                             %FindGoodLinks(obj, iLoc, iExcludeLocs, KnownGoodLinks, iSearched)
+%                                 NewLinks = FindGoodLinks(obj, iLinked(iLinkUpdate), [iLinked(iLinkUpdate); iLoc], setdiff(iLinked, iLinked(iLinkUpdate)), []);
+%                                 obj.Links{iLinked(iLinkUpdate)} = NewLinks;
+%                                 obj.LocLinkCount(iLinked(iLinkUpdate)) = size(NewLinks,1);                     
+%                        end
+% 
+%     %                   obj.Links{iLoc} = []; 
+%                        obj.BadLocs(iLoc) = true; %Skip this location
                        continue;
                    end
                end
-
             end
-            
         end
         
         %Remove locations within the radius of adjacent sections
@@ -515,18 +509,9 @@ classdef StructureObj
             DeadEndLocations = setdiff(DeadEndLocations, BadIndicies); 
             BranchLocations = find(obj.LocLinkCount(:,1) > 2);
             BranchLocations = setdiff(BranchLocations, BadIndicies); 
-            obj = CullOverlapping(obj, DeadEndLocations, [DeadEndLocations;BranchLocations]);
-                        
-            BadIndicies = find(obj.BadLocs == true); 
-            BranchLocations = find(obj.LocLinkCount(:,1) > 2);
-            BranchLocations = setdiff(BranchLocations, BadIndicies); 
-%            obj = CullOverlapping(obj, BranchLocations. []);
-            
-              
-%             
-%             PairedLocations = find(obj.LocLinkCount(:,1) == 2);
-%             PairedLocations = setdiff(PairedLocations, BadIndicies); 
-%             obj = CullOverlapping(obj, PairedLocations);
+            %Leavnig this check in creates artifacts, for example cell
+            %bodies become long thin rods instead of circles
+            %obj = CullOverlapping(obj, DeadEndLocations, [DeadEndLocations;BranchLocations]);
         end
         
         function obj = MendOverlappingTerminals(obj)
@@ -549,7 +534,7 @@ classdef StructureObj
                       StructureNamePrinted =true;
                       disp(['Mend required for structure #' num2str(obj.StructureID)]);
                    end
-                   disp(['    Ignoring orphan location #: ' num2str(obj.Locs(iLocs,obj.iID))]); 
+                   disp(['    Ignoring orphan location #: ' num2str(obj.Locs.ID(iLocs))]); 
                 end
                 
                 NotLinkedToMe = obj.LinkGraph ~= Label; 
@@ -560,9 +545,9 @@ classdef StructureObj
                 
                 %Figure out the two locations which are closest to each
                 %other...
-                Pos = [obj.Locs(iLocs, obj.iX) obj.Locs(iLocs, obj.iY) obj.Locs(iLocs, obj.iZ)];
+                Pos = [obj.Locs.X(iLocs) obj.Locs.Y(iLocs) obj.Locs.Z(iLocs)];
                 
-                TestPos = [obj.Locs(TestLocs, obj.iX) obj.Locs(TestLocs, obj.iY) obj.Locs(TestLocs,obj.iZ)];
+                TestPos = [obj.Locs.X(TestLocs) obj.Locs.Y(TestLocs) obj.Locs.Z(TestLocs)];
                 
                 %Only test the 25% of nearest locations
                 %K = ceil(min([length(iLocs) length(TestLocs)]) / 4);
@@ -587,12 +572,12 @@ classdef StructureObj
                 LinkFound = false; 
                 for(iTest = 1:numTestPos)
                     iTestLoc = TestLocs(iTest); 
-                    TestRadius = obj.Locs(iTestLoc, obj.iRadius) * obj.nmPerPixel;
+                    TestRadius = obj.Locs.Radius(iTestLoc) * obj.nmPerPixel;
                     
                     for(iIndexToLoc = 1:size(SortedI,1))
                         
                         iLoc = iLocs(SortedI(iIndexToLoc,iTest));
-                        Radius = obj.Locs(iLoc, obj.iRadius) * obj.nmPerPixel;
+                        Radius = obj.Locs.Radius(iLoc) * obj.nmPerPixel;
                         
                         if(SortedD(iIndexToLoc, iTest) <= Radius + TestRadius)
                             obj.Links{iLoc} = [obj.Links{iLoc}; iTestLoc 0 0];
@@ -605,10 +590,10 @@ classdef StructureObj
                               disp(['Mend required for structure #' num2str(obj.StructureID)]);
                             end
                    
-                            disp(['    Jumped gap: ' num2str(iLoc) ' (' num2str(obj.Locs(iLoc,obj.iID)) ') -> ' num2str(iTestLoc) ' (' num2str(obj.Locs(iTestLoc,obj.iID)) ')']);
-                            disp(['        X: ' num2str(obj.Locs(iLoc,obj.iX)) ...
-                                         ' Y: ' num2str(obj.Locs(iLoc,obj.iY)) ...
-                                         ' Z: ' num2str(obj.Locs(iLoc,obj.iZ)) ...
+                            disp(['    Jumped gap: ' num2str(iLoc) ' (' num2str(obj.Locs.ID(iLoc)) ') -> ' num2str(iTestLoc) ' (' num2str(obj.Locs.ID(iTestLoc)) ')']);
+                            disp(['        X: ' num2str(obj.Locs.UnscaledX(iLoc)) ...
+                                         ' Y: ' num2str(obj.Locs.UnscaledY(iLoc)) ...
+                                         ' Z: ' num2str(obj.Locs.UnscaledZ(iLoc)) ...
                                          ' DS: 4']);
                             newLabel = obj.LinkGraph(iTestLoc, iTestLoc); 
                             obj.LinkGraph(iLocsLogicalIndex) = newLabel;
@@ -640,7 +625,7 @@ classdef StructureObj
                         disp(['Mend required for structure #' num2str(obj.StructureID)]);
                     end
                             
-                    disp(['    Jumped gap: ' num2str(iLoc) ' (' num2str(obj.Locs(iLoc,obj.iID)) ') -> ' num2str(iTestLoc) ' (' num2str(obj.Locs(iTestLoc,obj.iID)) ')']);
+                    disp(['    Jumped gap: ' num2str(iLoc) ' (' num2str(obj.Locs.ID(iLoc)) ') -> ' num2str(iTestLoc) ' (' num2str(obj.Locs.ID(iTestLoc)) ')']);
                             
                     newLabel = obj.LinkGraph(iTestLoc, iTestLoc); 
                     obj.LinkGraph(iLocsLogicalIndex) = newLabel;
@@ -749,23 +734,27 @@ classdef StructureObj
             %Calculate the bounding box using the valid locations
             
             GoodLocs = ~obj.BadLocs;
-            Centers = obj.Locs(GoodLocs,[obj.iX obj.iY obj.iZ]);
+            Centers = [obj.Locs.X(GoodLocs) obj.Locs.Y(GoodLocs), obj.Locs.Z(GoodLocs)];%(GoodLocs,[obj.iX obj.iY obj.iZ]);
             
             %Adjust the model so we are centered on 0,0,0. 
-            if(length(Centers(:,obj.iX)) == 1)
+            if(length(Centers(:,1)) == 1)
                 obj.ModelTranslation = Centers;
                 
                 %Objects with one location are spheres, lets use a standard
                 %sphere model and scale it in COLLADA format
-                Radius = obj.Locs(GoodLocs, obj.iRadius);
+                Radius = obj.Locs.Radius(GoodLocs);
                 obj.ModelScale = [Radius Radius Radius];
             else
                 obj.ModelTranslation = median( Centers );
             end
+            
+            %NewLocs = obj.Locs;
               
-            obj.Locs(:,obj.iX) = obj.Locs(:,obj.iX)-obj.ModelTranslation(1);
-            obj.Locs(:,obj.iY) = obj.Locs(:,obj.iY)-obj.ModelTranslation(2);
-            obj.Locs(:,obj.iZ) = obj.Locs(:,obj.iZ)-obj.ModelTranslation(3);
+            obj.Locs.X = obj.Locs.X - obj.ModelTranslation(1);
+            obj.Locs.Y = obj.Locs.Y - obj.ModelTranslation(2);
+            obj.Locs.Z = obj.Locs.Z - obj.ModelTranslation(3);
+            
+            %obj.Locs = NewLocs;
         end
 
         function obj = TranslateModel(obj, vector)
@@ -782,20 +771,13 @@ classdef StructureObj
             %obj.Verts(:,obj.iZ) = obj.Verts(:,obj.iZ) * scalar;
         end
         
-        
-        
-        
         function [obj] = CalculateBoundingBox(obj)
             %Determine the bounding box of the model using the verticies
             obj.ModelBoundingBox = BoundingBox(obj.Verts);
             
             obj.WorldBoundingBox(1,:) = obj.ModelBoundingBox(1,:) + obj.ModelTranslation;
             obj.WorldBoundingBox(2,:) = obj.ModelBoundingBox(2,:) + obj.ModelTranslation;
-            
         end
-        
-        
-        
         
         %Create faces for the two IDs
         function Faces = CreateFaces(obj, iA, iB)
@@ -835,13 +817,13 @@ classdef StructureObj
 %             iVertsA = ((iA-1)*obj.numCirclePts)+1:((iA-1)*obj.numCirclePts)+obj.numCirclePts;
 %             iVertsB = ((iB-1)*obj.numCirclePts)+1:((iB-1)*obj.numCirclePts)+obj.numCirclePts;
 %             
-            AX = obj.Locs(iA, obj.iX) * obj.nmPerPixel;
-            AY = obj.Locs(iA, obj.iY) * obj.nmPerPixel;
-            AZ = obj.Locs(iA, obj.iZ) * obj.nmPerSection;
+            AX = obj.Locs.X(iA) * obj.nmPerPixel;
+            AY = obj.Locs.Y(iA) * obj.nmPerPixel;
+            AZ = obj.Locs.Z(iA) * obj.nmPerSection;
             
-            BX = obj.Locs(iB, obj.iX) * obj.nmPerPixel;
-            BY = obj.Locs(iB, obj.iY) * obj.nmPerPixel;
-            BZ = obj.Locs(iB, obj.iZ) * obj.nmPerSection;
+            BX = obj.Locs.X(iB) * obj.nmPerPixel;
+            BY = obj.Locs.Y(iB) * obj.nmPerPixel;
+            BZ = obj.Locs.Z(iB) * obj.nmPerSection;
             
             A = [AX AY AZ];
             B = [BX BY BZ];
@@ -856,6 +838,13 @@ classdef StructureObj
                                                       obj.Verts(iVertsB,:)); 
         end
         
+        function Links = GetLocationLinks(obj, iLoc)
+            if isempty(obj.Links{iLoc})
+                Links = [];
+            else
+                Links = obj.Links{iLoc}(:,1);
+            end
+        end
         
         %Walk the graph from a bad node and locate all good links that
         %can be reached from it
@@ -880,6 +869,42 @@ classdef StructureObj
                 FoundLinks = cat(2, FoundLinks, zeros(length(FoundLinks),2));
             end
         end
+        
+         function obj = RemoveLocation(obj, iLoc)
+            %Removes a location from our structure.  Mark the location as
+            %bad.  Update location links to skip the removed location
+            
+            %iLinked = obj.Links{iLoc}(:,1);
+            
+            GoodLinks = GetLocationLinks(obj, iLoc);
+            
+            %GoodLinks = obj.FindGoodLinks(iLoc, [iLoc], setdiff(iLinked, iLinked(iLink)), []);
+            
+            %obj.Links{iLinked(iLink)} = GoodLinks;
+            %obj.LocLinkCount(iLinked(iLink)) = size(GoodLinks,1);          
+
+            for(iLink = 1:length(GoodLinks))
+                iLocToUpdate = GoodLinks(iLink);
+                %FindGoodLinks(obj, iLoc, iExcludeLocs, KnownGoodLinks, iSearched)
+                LocToUpdateLinks = GetLocationLinks(obj, iLocToUpdate);
+                %Remove the location we are removing from the list
+                UpdatedLinks = setdiff([LocToUpdateLinks;GoodLinks], [iLoc; iLocToUpdate]);
+                %Add the locations linked by the location we are removing
+                %to the list
+                UpdatedLinks = unique(UpdatedLinks);
+                
+                %Add columns for additional data
+                UpdatedLinks = cat(2, UpdatedLinks, zeros(length(UpdatedLinks),2));
+
+                obj.Links{iLocToUpdate} = UpdatedLinks;
+                obj.LocLinkCount(iLocToUpdate) = size(UpdatedLinks,1);                     
+            end
+
+            obj.BadLocs(iLoc) = true; %Skip this location
+            obj.LocLinkCount(iLoc) = 0;
+            obj.Links{iLoc} = [];
+         end
+             
         
         %Attempts to repair bad sections by combining adjacent nodes on
         %either side of the bad link
@@ -977,14 +1002,13 @@ classdef StructureObj
                end
                
                numLinks = length(listLinks);
-               
             end
                     
 %             FaceCount = FaceCount + ...
 %                          (length(DeadEndIndicies) * numHemisphereFaces) + ... %Faces for locations with one link
 %                          (length(UnlinkedIndicies) * numSphereFaces);
             
-             FaceCount = (length(DeadEndIndicies) * numHemisphereFaces) + ... %Faces for locations with one link
+            FaceCount = (length(DeadEndIndicies) * numHemisphereFaces) + ... %Faces for locations with one link
                            (length(UnlinkedIndicies) * numSphereFaces);
                       
             FastFaceCount = (length(CylinderIndicies) * 2 * obj.numCirclePts) + ...; %Faces for locations with two links
@@ -1012,7 +1036,7 @@ classdef StructureObj
             if(obj.UseCommonSphere)
                %disp(['    Is a sphere: ' num2str(obj.StructureID)]);
                iLoc = UnlinkedIndicies(1); 
-               scale = obj.Locs(iLoc, obj.iRadius) * obj.nmPerPixel; 
+               scale = obj.Locs.Radius(iLoc) * obj.nmPerPixel; 
                obj.ModelScale = [scale scale scale]; 
             end
             
@@ -1035,14 +1059,14 @@ classdef StructureObj
                %need to be refaced
                obj = obj.SetVertexForLink(iLoc, iLinked(1), iVert, obj.numCirclePts); 
                
-               X = obj.Locs(iLoc, obj.iX) * obj.nmPerPixel;
-               Y = obj.Locs(iLoc, obj.iY) * obj.nmPerPixel; 
-               Z = obj.Locs(iLoc, obj.iZ) * obj.nmPerSection;
-               Radius = obj.Locs(iLoc, obj.iRadius) * obj.nmPerPixel;
+               X = obj.Locs.X(iLoc) * obj.nmPerPixel;
+               Y = obj.Locs.Y(iLoc) * obj.nmPerPixel; 
+               Z = obj.Locs.Z(iLoc) * obj.nmPerSection;
+               Radius = obj.Locs.Radius(iLoc) * obj.nmPerPixel;
                
-               AX = obj.Locs(iLinked(1), obj.iX) * obj.nmPerPixel;
-               AY = obj.Locs(iLinked(1), obj.iY) * obj.nmPerPixel; 
-               AZ = obj.Locs(iLinked(1), obj.iZ) * obj.nmPerSection;
+               AX = obj.Locs.X(iLinked(1)) * obj.nmPerPixel;
+               AY = obj.Locs.Y(iLinked(1)) * obj.nmPerPixel; 
+               AZ = obj.Locs.Z(iLinked(1)) * obj.nmPerSection;
                
                P = [X Y Z];
                A = [AX AY AZ];  
@@ -1124,25 +1148,25 @@ classdef StructureObj
                obj.MapIDToIndex(iLoc, obj.iVertCount) = obj.numCirclePts; %Record the indicies the verticies start for this location
                
             
-                iLinked = obj.Links{iLoc}(:,1);
+               iLinked = obj.Links{iLoc}(:,1);
                iVertexOffsets = obj.Links{iLoc}(:,2);
                
                obj = obj.SetVertexForLink(iLoc, iLinked(1), iVert, obj.numCirclePts); 
                obj = obj.SetVertexForLink(iLoc, iLinked(2), iVert, obj.numCirclePts); 
 %               iVerts = ((iLoc-1)*obj.numCirclePts)+1:((iLoc-1)*obj.numCirclePts)+obj.numCirclePts;
               
-               X = obj.Locs(iLoc, obj.iX) * obj.nmPerPixel;
-               Y = obj.Locs(iLoc, obj.iY) * obj.nmPerPixel;
-               Z = obj.Locs(iLoc, obj.iZ) * obj.nmPerSection;
-               Radius = obj.Locs(iLoc, obj.iRadius) * obj.nmPerPixel;
+               X = obj.Locs.X(iLoc) * obj.nmPerPixel;
+               Y = obj.Locs.Y(iLoc) * obj.nmPerPixel;
+               Z = obj.Locs.Z(iLoc) * obj.nmPerSection;
+               Radius = obj.Locs.Radius(iLoc) * obj.nmPerPixel;
                
-               AX = obj.Locs(iLinked(1), obj.iX) * obj.nmPerPixel;
-               AY = obj.Locs(iLinked(1), obj.iY) * obj.nmPerPixel;
-               AZ = obj.Locs(iLinked(1), obj.iZ) * obj.nmPerSection;
+               AX = obj.Locs.X(iLinked(1)) * obj.nmPerPixel;
+               AY = obj.Locs.Y(iLinked(1)) * obj.nmPerPixel;
+               AZ = obj.Locs.Z(iLinked(1)) * obj.nmPerSection;
                
-               BX = obj.Locs(iLinked(2), obj.iX) * obj.nmPerPixel;
-               BY = obj.Locs(iLinked(2), obj.iY) * obj.nmPerPixel; 
-               BZ = obj.Locs(iLinked(2), obj.iZ) * obj.nmPerSection;
+               BX = obj.Locs.X(iLinked(2)) * obj.nmPerPixel;
+               BY = obj.Locs.Y(iLinked(2)) * obj.nmPerPixel; 
+               BZ = obj.Locs.Z(iLinked(2)) * obj.nmPerSection;
                
                P = [X Y Z];
                A = [AX AY AZ]; 
@@ -1204,10 +1228,8 @@ classdef StructureObj
                 obj = obj.SetVertexForLink(iLoc, iLinked(iLink), iVert, obj.numSphereVerts); 
                end
                
-               X = obj.Locs(iLoc, obj.iX) * obj.nmPerPixel;
-               Y = obj.Locs(iLoc, obj.iY) * obj.nmPerPixel;
-               Z = obj.Locs(iLoc, obj.iZ) * obj.nmPerSection;
-               Radius = obj.Locs(iLoc, obj.iRadius) * obj.nmPerPixel;
+               [X, Y, Z] = obj.GetPosition(iLoc);
+               Radius = obj.Locs.Radius(iLoc) * obj.nmPerPixel;
                
                sphereStruct = SpherePatch(obj.numCirclePts, Radius, [0 0 1], false); 
                sphereStruct.Verts(:,1) = sphereStruct.Verts(:,1)  + X; 
@@ -1327,10 +1349,10 @@ classdef StructureObj
                 
                 for(i = 1:length(UnlinkedIndicies))
                     iLoc = UnlinkedIndicies(i);
-                    X = obj.Locs(iLoc, obj.iX) * obj.nmPerPixel;
-                    Y = obj.Locs(iLoc, obj.iY) * obj.nmPerPixel; 
-                    Z = obj.Locs(iLoc, obj.iZ) * obj.nmPerSection;
-                    Radius = obj.Locs(iLoc, obj.iRadius) * obj.nmPerPixel;
+                    X = obj.Locs.X(iLoc) * obj.nmPerPixel;
+                    Y = obj.Locs.Y(iLoc) * obj.nmPerPixel; 
+                    Z = obj.Locs.Z(iLoc) * obj.nmPerSection;
+                    Radius = obj.Locs.Radius(iLoc) * obj.nmPerPixel;
 
                     iVerts = iVert:iVert + obj.numSphereVerts-1;
                     obj.MapIDToIndex(iLoc, obj.iVertOffset) = iVert;
@@ -1936,10 +1958,10 @@ classdef StructureObj
         function RenderLabelText(obj)
             GoodIndicies = find(obj.BadLocs == false); 
             
-            meanX = (median(obj.Locs(GoodIndicies,obj.iX)) * obj.nmPerPixel) + obj.ModelTranslation(1);
-            meanY = (median(obj.Locs(GoodIndicies,obj.iY)) * obj.nmPerPixel) + obj.ModelTranslation(2);
-            maxZ = (max(obj.Locs(GoodIndicies,obj.iZ)) * obj.nmPerSection)  + obj.ModelTranslation(3);
-            maxRadius = max(obj.Locs(GoodIndicies,obj.iRadius)) * obj.nmPerPixel;
+            meanX = (median(obj.Locs.X(GoodIndicies)) * obj.nmPerPixel) + obj.ModelTranslation(1);
+            meanY = (median(obj.Locs.Y(GoodIndicies)) * obj.nmPerPixel) + obj.ModelTranslation(2);
+            maxZ = (max(obj.Locs.Z(GoodIndicies)) * obj.nmPerSection)  + obj.ModelTranslation(3);
+            maxRadius = max(obj.Locs.Radius(GoodIndicies)) * obj.nmPerPixel;
             
             FontSize = 8;
             FontWeight = 'normal'; 

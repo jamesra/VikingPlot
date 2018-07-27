@@ -8,7 +8,7 @@ memberVerts = ismember(ValidIndicies, IndiciesToChange);
 nonmemberVerts = ~memberVerts; 
 indexToSkip = iSortedVertOrder(nonmemberVerts);
 
-for(i = 1:length(indexToSkip))
+for i = 1:length(indexToSkip)
   iDecrement = iSortedVertOrderTriOne > indexToSkip(i); 
   FixedIndicies(iDecrement) = FixedIndicies(iDecrement) - 1;
 end

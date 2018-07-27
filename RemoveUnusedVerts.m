@@ -9,7 +9,7 @@ function [ MappedVerts, MappedFaces] = RemoveUnusedVerts( Verts, Faces )
     MappedVerts = Verts(UsedVerts,:);
     MappedFaces = Faces;
 
-    for(iVert = UnusedVerts)
+    for iVert = UnusedVerts
         iAdjustedFaces = Faces > iVert;
         MappedFaces(iAdjustedFaces) = MappedFaces(iAdjustedFaces) - 1;
     end

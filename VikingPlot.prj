@@ -1,9 +1,9 @@
 <deployment-project plugin="plugin.ezdeploy" plugin-version="1.0">
-  <configuration build-checksum="2968305852" file="C:\Src\MatLab\WirePlot\VikingPlot.prj" location="C:\Src\MatLab\WirePlot" name="VikingPlot" preferred-package-location="C:\Src\MatLab\WirePlot\VikingPlot\for_redistribution" preferred-package-type="package.type.exe" target="target.ezdeploy.standalone" target-name="Application Compiler">
+  <configuration build-checksum="839585083" file="C:\Src\Git\VikingPlot\VikingPlot.prj" location="C:\Src\Git\VikingPlot" name="VikingPlot" preferred-package-location="C:\Src\Git\VikingPlot\VikingPlot\for_redistribution" preferred-package-type="package.type.exe" target="target.ezdeploy.standalone" target-name="Application Compiler">
     <param.appname>VikingPlot</param.appname>
     <param.icon />
     <param.icons />
-    <param.version>1.03</param.version>
+    <param.version>1.07</param.version>
     <param.authnamewatermark>James Anderson</param.authnamewatermark>
     <param.email>james.r.anderson@utah.edu</param.email>
     <param.company>University of Utah</param.company>
@@ -11,7 +11,7 @@
     <param.description />
     <param.screenshot>${PROJECT_ROOT}\VikingPlotThumbnail.png</param.screenshot>
     <param.guid />
-    <param.installpath.string>VikingPlot-1.03.2016.09.15</param.installpath.string>
+    <param.installpath.string>VikingPlot-1.03.2016.09.23</param.installpath.string>
     <param.installpath.combo>option.installpath.programfiles</param.installpath.combo>
     <param.logo />
     <param.install.notes />
@@ -22,18 +22,21 @@
     <param.logdir>${PROJECT_ROOT}\VikingPlot</param.logdir>
     <param.enable.clean.build>false</param.enable.clean.build>
     <param.user.defined.mcr.options />
-    <param.embed.ctf>true</param.embed.ctf>
     <param.target.type>subtarget.standalone</param.target.type>
     <param.support.packages />
     <param.web.mcr>true</param.web.mcr>
     <param.package.mcr>false</param.package.mcr>
     <param.no.mcr>false</param.no.mcr>
-    <param.web.mcr.name>MyAppInstaller_web</param.web.mcr.name>
-    <param.package.mcr.name>MyAppInstaller_mcr</param.package.mcr.name>
+    <param.web.mcr.name>VikingPlotInstaller_web</param.web.mcr.name>
+    <param.package.mcr.name>VikingPlotInstaller_mcr</param.package.mcr.name>
     <param.no.mcr.name>MyAppInstaller_app</param.no.mcr.name>
     <param.windows.command.prompt>false</param.windows.command.prompt>
     <param.create.log>false</param.create.log>
     <param.log.file />
+    <param.native.matlab>false</param.native.matlab>
+    <param.checkbox>false</param.checkbox>
+    <param.example />
+    <param.help.text />
     <unset>
       <param.icon />
       <param.icons />
@@ -48,22 +51,24 @@
       <param.logdir />
       <param.enable.clean.build />
       <param.user.defined.mcr.options />
-      <param.embed.ctf />
       <param.target.type />
       <param.support.packages />
       <param.web.mcr />
       <param.package.mcr />
       <param.no.mcr />
-      <param.web.mcr.name />
-      <param.package.mcr.name />
       <param.no.mcr.name />
       <param.create.log />
       <param.log.file />
+      <param.native.matlab />
+      <param.checkbox />
+      <param.example />
+      <param.help.text />
     </unset>
     <fileset.main>
       <file>${PROJECT_ROOT}\VikingPlot.m</file>
     </fileset.main>
     <fileset.resources>
+      <file>${PROJECT_ROOT}\+IO</file>
       <file>${PROJECT_ROOT}\AddBoundingBoxes.m</file>
       <file>${PROJECT_ROOT}\AddColladaNode.m</file>
       <file>${PROJECT_ROOT}\AddFloatElement.m</file>
@@ -83,18 +88,13 @@
       <file>${PROJECT_ROOT}\CreateRenderingFigure.m</file>
       <file>${PROJECT_ROOT}\CylinderFaces.m</file>
       <file>${PROJECT_ROOT}\CylinderFacesOffset.m</file>
-      <file>${PROJECT_ROOT}\FetchData.m</file>
       <file>${PROJECT_ROOT}\FindIntersectingEdges.m</file>
       <file>${PROJECT_ROOT}\FlipFaces.m</file>
       <file>${PROJECT_ROOT}\FlyThroughCapture.m</file>
       <file>${PROJECT_ROOT}\HemispherePatch.m</file>
       <file>${PROJECT_ROOT}\ImageColorMap.m</file>
-      <file>${PROJECT_ROOT}\LinkGraph.m</file>
       <file>${PROJECT_ROOT}\MaterialManager.m</file>
       <file>${PROJECT_ROOT}\PPlot2.m</file>
-      <file>${PROJECT_ROOT}\ReadColorsFile.m</file>
-      <file>${PROJECT_ROOT}\ReadConnection.m</file>
-      <file>${PROJECT_ROOT}\ReadIDsFromFile.m</file>
       <file>${PROJECT_ROOT}\RemoveUnusedVerts.m</file>
       <file>${PROJECT_ROOT}\RotationMatrix.m</file>
       <file>${PROJECT_ROOT}\SpherePatch.m</file>
@@ -124,34 +124,25 @@
     <fileset.depfun>
       <file>${PROJECT_ROOT}\AxisScale.m</file>
       <file>${PROJECT_ROOT}\ConvertScaleUnits.m</file>
-      <file>${PROJECT_ROOT}\FetchOData.m</file>
-      <file>${PROJECT_ROOT}\FetchODataChildStructures.m</file>
-      <file>${PROJECT_ROOT}\FetchODataScale.m</file>
-      <file>${PROJECT_ROOT}\FetchScale.m</file>
       <file>${PROJECT_ROOT}\IsEndpoint.m</file>
       <file>${PROJECT_ROOT}\ModCircleCapture.m</file>
       <file>${PROJECT_ROOT}\ODataWebOptions.m</file>
       <file>${PROJECT_ROOT}\QueryODataIDs.m</file>
       <file>${PROJECT_ROOT}\ScalarForUnitConversion.m</file>
       <file>${PROJECT_ROOT}\ScalarForUnitToMeters.m</file>
+      <file>${PROJECT_ROOT}\ScaleLocations.m</file>
+      <file>${PROJECT_ROOT}\webread_odata.m</file>
       <file>${PROJECT_ROOT}\Window.m</file>
     </fileset.depfun>
     <build-deliverables>
-      <file location="${PROJECT_ROOT}\VikingPlot\for_testing" name="VikingPlot.exe" optional="false">C:\Src\MatLab\WirePlot\VikingPlot\for_testing\VikingPlot.exe</file>
-      <file location="${PROJECT_ROOT}\VikingPlot\for_testing" name="splash.png" optional="false">C:\Src\MatLab\WirePlot\VikingPlot\for_testing\splash.png</file>
-      <file location="${PROJECT_ROOT}\VikingPlot\for_testing" name="readme.txt" optional="true">C:\Src\MatLab\WirePlot\VikingPlot\for_testing\readme.txt</file>
+      <file location="${PROJECT_ROOT}\VikingPlot\for_testing" name="splash.png" optional="false">C:\Src\Git\VikingPlot\VikingPlot\for_testing\splash.png</file>
+      <file location="${PROJECT_ROOT}\VikingPlot\for_testing" name="VikingPlot.exe" optional="false">C:\Src\Git\VikingPlot\VikingPlot\for_testing\VikingPlot.exe</file>
+      <file location="${PROJECT_ROOT}\VikingPlot\for_testing" name="readme.txt" optional="true">C:\Src\Git\VikingPlot\VikingPlot\for_testing\readme.txt</file>
     </build-deliverables>
     <workflow />
     <matlab>
-      <root>C:\Program Files\MATLAB\R2016a</root>
-      <toolboxes>
-        <toolbox name="matlabcoder" />
-      </toolboxes>
-      <toolbox>
-        <matlabcoder>
-          <enabled>true</enabled>
-        </matlabcoder>
-      </toolbox>
+      <root>C:\Program Files\MATLAB\R2017b</root>
+      <toolboxes />
     </matlab>
     <platform>
       <unix>false</unix>
@@ -162,7 +153,7 @@
       <vista>false</vista>
       <linux>false</linux>
       <solaris>false</solaris>
-      <osver>6.1</osver>
+      <osver>10.0</osver>
       <os32>false</os32>
       <os64>true</os64>
       <arch>win64</arch>

@@ -5,7 +5,6 @@ function [ DOM ] = AddToColladaVisualScene( DOM, Name, MaterialName, Translation
     DOMNode = DOM.getDocumentElement;
     
     VisLibList = DOMNode.getElementsByTagName('library_visual_scenes'); 
-    VisSceneLibNode = [];
     if(isempty(VisLibList.item(0)))
        VisSceneLibNode = DOM.createElement('library_visual_scenes'); 
               

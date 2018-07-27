@@ -113,74 +113,53 @@ function PPlot2(Structs, Locs, LocLinks, scale_struct, VolumeName, varargin)
         disp(['  ' g.Renderer]);
         disp(['  Max Texture Size: ' num2str(g.MaxTextureSize)]);
         disp(['  ' g.Visual]);
-        disp(['  ' g.Software]);
+        disp(['  ' num2str(g.Software)]);
     else
         disp('   Matlab ZBuffer software renderer with Phong lighting'); 
     end
     
-    %Structure indicies
-    iID = 1;
-    iParentID = 2;
-    iTypeID = 3; 
-    iLabel = 4; 
-    iLastModified = 5;     
-
-    %Location indicies
-    iID = 1;
-    iParentID = 2;
-    iX = 3;
-    iY = 4;
-    iZ = 5;
-    iRadius = 6;
-    iSectionX = 7; %These are the coords in section space, used to map color
-    iSectionY = 8;
-
-    %We add these colums to the Loc structure
-    iUnscaledX  = 9;
-    iUnscaledY  = 10;
-    iUnscaledZ  = 11;
-    iUnscaledRadius = 12;
-
     %SectionExcludeList = [8 22 56 60 66 72 81 108 179]; 
     SectionExcludeList = [];
     
-    ValidZ = unique(Locs(:,iZ)); 
+    ValidZ = unique(Locs.Z); 
 
     %CircleVerts = CirclePatch(numCirclePts, 1, [0 0 1]); 
     %Faces = CylinderFaces(numCirclePts);
-    if(length(LocLinks) == 1)
+    if(length(LocLinks.A) == 1)
         %An edge case when we have no links
         numLinks = 0;
     else
-        numLinks = size(LocLinks,1);
+        numLinks = size(LocLinks.A,1);
     end
 
-    if(length(Locs) == 1)
+    if(length(Locs.ID) == 1)
         %An edge case for no locations
         return; 
     end
 
-    numLocs = size(Locs,1);
+    numLocs = size(Locs.ID,1);
     
-    numStructs = size(Structs,1);
+    numStructs = length(Structs);
     
     scale_struct = ConvertScaleUnits(scale_struct, 'um');
-  
-    %Keep a copy of the original data and scale the coordinates.
-    Locs(:,iUnscaledX) = Locs(:,iX);
-    Locs(:,iUnscaledY) = Locs(:,iY);
-    Locs(:,iUnscaledZ) = Locs(:,iZ);
-    Locs(:,iUnscaledRadius) = Locs(:,iRadius);
-
-    Locs(:,iX) = Locs(:,iX) * scale_struct.X.Value;
-    Locs(:,iY) = Locs(:,iY) * scale_struct.Y.Value;
-    Locs(:,iZ) = Locs(:,iZ) * scale_struct.Z.Value;
+%     
+%     scale_struct.X.Value = .001; 
+%     scale_struct.Y.Value = .001; 
+%     scale_struct.Z.Value = .045; 
+    
     
     if InvertZ
-        Locs(:,iZ) = Locs(:,iZ) * -1;
+        scale_struct.Z.Value = scale_struct.Z.Value * -1;
     end
-    
-    Locs(:,iRadius) = Locs(:,iRadius) * scale_struct.X.Value;
+  
+    %Scale the coordinates, keeps a copy of the original data
+    Locs = ScaleLocations(Locs, scale_struct);
+     
+    for(iStruct = 1:numStructs)
+        structure = Structs{iStruct};
+        structure.Locations = ScaleLocations(structure.Locations, scale_struct);
+        Structs{iStruct} = structure;
+    end
 
     StructureTypeColors = IO.Local.ReadColorsFile('StructureTypeColors.txt', DefaultAlpha);
     
@@ -192,7 +171,6 @@ function PPlot2(Structs, Locs, LocLinks, scale_struct, VolumeName, varargin)
                                85 1 1 1 1];  %Desmosome
     end
     
-   
     StructureColors = IO.Local.ReadColorsFile('StructureColors.txt', DefaultAlpha);
     if isempty(StructureColors)
         StructureColors = [0 0 0 0 1];
@@ -204,45 +182,38 @@ function PPlot2(Structs, Locs, LocLinks, scale_struct, VolumeName, varargin)
     %Create an ImageMapping object
     ImageColorMapObj = ImageColorMap(ImageColorMapFullPath); 
 
-    DrawnSpheres = []; 
-
     %Figure out how many Loc objects we need to create
-    uniqueLocs = unique(Locs(:,iParentID));
+    StructureIDs = unique(Locs.ParentID);
 
     MapLocIDToIndex = java.util.Hashtable(numLocs);
 
     for(iLoc = 1:numLocs)
-        LocID = Locs(iLoc,iID);
+        LocID = Locs.ID(iLoc);
 
         MapLocIDToIndex.put(LocID, iLoc);
     end 
 
-    %MapIDToObj = cell(max(uniqueLocs),1);
+    %MapIDToObj = cell(max(StructureIDs),1);
     MapIDToObj = StructureManager(numStructs);
-    indexToObjList = zeros(length(uniqueLocs),1);
+    indexToObjList = zeros(length(StructureIDs),1);
     NextObjIndex = 1;
     
     disp('Creating structure maps...');
     
     MapStructIDToIndex = java.util.Properties;
     for(iStruct = 1:numStructs)
-        StructID = Structs{iStruct,iID}; 
+        StructID = Structs{iStruct}.ID; 
         MapStructIDToIndex.put(StructID, iStruct); 
     end
 
     disp('Creating structures...'); 
 
-    for(iPID = 1:length(uniqueLocs))
+    for(iStruct = 1:length(Structs))
         MaterialName = 'White'; 
-        PID = uniqueLocs(iPID);
-        iLocs = find(Locs(:,iParentID) == PID);
-
-        iStruct = MapStructIDToIndex.get(PID);
+        structure = Structs{iStruct};
+        PID = structure.ID; 
                 
-        TypeID = Structs{iStruct, iTypeID}; 
-        ParentID = Structs{iStruct, iParentID}; 
-        Label = Structs{iStruct, iLabel};
-
+        TypeID = structure.TypeID; 
         
         color = [];
         alpha = DefaultAlpha;
@@ -276,13 +247,12 @@ function PPlot2(Structs, Locs, LocLinks, scale_struct, VolumeName, varargin)
                 %available                
 
                 if(~isempty(ImageColorMapObj))
-                   [ZColorMatches, iColorMatchingLocs] = intersect(Locs(iLocs, iUnscaledZ), ImageColorMapObj.Sections);
-                   if(~isempty(iColorMatchingLocs))
-                        iColorMatch = iLocs(iColorMatchingLocs); 
-                        color = ImageColorMapObj.GetColor(Locs(iColorMatch, iSectionX), ...
-                                                         Locs(iColorMatch, iSectionY), ...
-                                                         Locs(iColorMatch, iUnscaledZ), ...
-                                                         Locs(iColorMatch, iUnscaledRadius));
+                   [ZColorMatches, iColorMatch] = intersect(structure.Locations.UnscaledZ, ImageColorMapObj.Sections);
+                   if(~isempty(iColorMatch)) 
+                        color = ImageColorMapObj.GetColor(structure.Locations.SectionX(iColorMatch), ...
+                                                         structure.Locations.SectionY(iColorMatch), ...
+                                                         structure.Locations.UnscaledZ(iColorMatch), ...
+                                                         structure.Locations.UnscaledRadius(iColorMatch));
                    end
                 end
 
@@ -307,7 +277,7 @@ function PPlot2(Structs, Locs, LocLinks, scale_struct, VolumeName, varargin)
 
         %The structure object doesn't use anything after the type index, so
         %save some memory by not passing the rest
-        obj = StructureObj(Locs(iLocs,1:iRadius), color, alpha, MaterialName, TypeID, ParentID, Label); 
+        obj = StructureObj(structure, color, alpha, MaterialName); 
         MapIDToObj.put(PID, obj);
         indexToObjList(NextObjIndex) = PID;
         NextObjIndex = NextObjIndex + 1;
@@ -319,11 +289,10 @@ function PPlot2(Structs, Locs, LocLinks, scale_struct, VolumeName, varargin)
     %children
     iUnusedObjs = indexToObjList == 0;
     indexToObjList(iUnusedObjs) = [];
-
     
     for(iLink = 1:numLinks)
-       AID = LocLinks(iLink,1);
-       BID = LocLinks(iLink,2);
+       AID = LocLinks.A(iLink);
+       BID = LocLinks.B(iLink);
 
        iLocA = MapLocIDToIndex.get(AID);
        if(isempty(iLocA))
@@ -335,17 +304,17 @@ function PPlot2(Structs, Locs, LocLinks, scale_struct, VolumeName, varargin)
            continue; 
        end 
 
-       PID = Locs(iLocA,iParentID); 
+       PID = Locs.ParentID(iLocA); 
        structure_obj = MapIDToObj.get(PID);
 
        if(isempty(structure_obj))
            continue;
        end
 
-       Ax = Locs(iLocA,iX);
-       Ay = Locs(iLocA,iY);
-       Az = Locs(iLocA,iUnscaledZ);
-       Bz = Locs(iLocB,iUnscaledZ);
+       Ax = Locs.X(iLocA);
+       Ay = Locs.Y(iLocA);
+       Az = Locs.UnscaledZ(iLocA);
+       Bz = Locs.UnscaledZ(iLocB);
 
        Z = [Az, Bz];
        section_distance = abs(Az - Bz);
@@ -361,7 +330,7 @@ function PPlot2(Structs, Locs, LocLinks, scale_struct, VolumeName, varargin)
 
           if(~isempty(BadJumps))
             disp(['Warning, Structure ' num2str(PID) ': big jump between location IDs: ' num2str(iLocA) ', ' num2str(iLocB) ' Z: ' num2str(Az) ' -> ' num2str(Bz)] );
-            disp(['X: ' num2str(Ax,'%1.0f') ' Y: ' num2str(Ay,'%1.0f') ' Z: ' num2str(Az)]); 
+            disp(['X: ' num2str(Locs.UnscaledX(iLocA),'%1.0f') ' Y: ' num2str(Locs.UnscaledY(iLocA),'%1.0f') ' Z: ' num2str(Az)]); 
           end
        end
 
@@ -393,100 +362,23 @@ function PPlot2(Structs, Locs, LocLinks, scale_struct, VolumeName, varargin)
        MapIDToObj.put(PID,structure_obj);
 
     end
-
-%     for(iLink = 1:numLinks)
-%        iLocA = find(Locs(:,1) == LocLinks(iLink,1));
-%        if(isempty(iLocA))
-%            continue; 
-%        end
-%        
-%        iLocB = find(Locs(:,1) == LocLinks(iLink,2)); 
-%        if(isempty(iLocB))
-%            continue; 
-%        end 
-%        
-%        AID = Locs(iLocA, iID);
-%        BID = Locs(iLocB, iID);
-%        
-%        PID = Locs(iLocA, iParentID);
-%        
-%        Ax = Locs(iLocA,iX);
-%        Ay = Locs(iLocA,iY);
-%        Az = Locs(iLocA,iUnscaledZ);
-%        Bz = Locs(iLocB,iUnscaledZ);
-%       
-%        Z = [Az, Bz];
-%        
-%        if(abs(Az-Bz) > 2)
-%           SkippedRange = min(Az,Bz)+1:max(Az,Bz)-1; 
-%           
-%           %Remove sections which don't exist
-%           SkippedRange = intersect(SkippedRange, ValidZ); 
-%           
-%           %Remove sections which are known to be bad
-%           BadJumps = setdiff(SkippedRange, SectionExcludeList) ;
-%           
-%           if(~isempty(BadJumps))
-%             disp(['Warning, Structure ' num2str(PID) ': big jump between location IDs: ' num2str(iLocA) ', ' num2str(iLocB) ' Z: ' num2str(Az) ' -> ' num2str(Bz)] );
-%             disp(['X: ' num2str(Ax,'%1.0f') ' Y: ' num2str(Ay,'%1.0f') ' Z: ' num2str(Az)]); 
-%           end
-%        end
-%        
-%        AValid = 1; 
-%        BValid = 1; 
-%        
-%        %Find out if the link occurs over bad sections
-%        [I, iZValid, iSectionMatch] = intersect(Z,SectionExcludeList);
-%        if(~isempty(I))
-%            if(find(iZValid == 1))
-%                AValid = 0; 
-%            end
-%            
-%            if(find(iZValid == 2))
-%                BValid = 0;
-%            end
-%            
-%           %Add this to the broken link list to see if we can connect it
-%           %later
-%           %BrokenLinks{iLocA} = [BrokenLinks{iLocA} iLocB];
-%        end
-%        
-%        PID = Locs(iLocA,iParentID);
-%        
-%        LocObj = MapIDToObj{PID};
-%        
-%        if(isempty(LocObj) == false)
-%             if(Az < Bz)
-%                 LocObj = LocObj.AddLink(BID,AID, BValid, AValid);
-%             else
-%                 LocObj = LocObj.AddLink(AID,BID, AValid, BValid);
-%             end
-%        end
-%        MapIDToObj{PID} = LocObj;
-%              
-%     end
-
         
     disp('    Building structure hierarchy'); 
     
     %Add child structures to thier parents
     for iStruct = 1:size(Structs,1)
-       StructID = Structs{iStruct, iID}; 
-       ParentID = Structs{iStruct, iParentID}; 
-
-       if(~isnan(ParentID))
-           LocObj = MapIDToObj.get(StructID);
-
-           if(isempty(LocObj) == false)
-                if(~isempty(LocObj.ParentID))
-
-                    ParentObj = MapIDToObj.get(LocObj.ParentID);
-                    if(isempty(ParentObj) == false)
-                        ParentObj = ParentObj.AddChildStructure(LocObj); 
-                        MapIDToObj.put(LocObj.ParentID, ParentObj);
-                    end
-                end
-           end
+       StructID = Structs{iStruct}.ID;
+       struct = MapIDToObj.get(StructID);
+       if isempty(struct)
+           continue;
+       end
+         
+       if struct.HasParent
+           ParentObj = MapIDToObj.get(struct.ParentID);
+           if ~isempty(ParentObj)
+                ParentObj = ParentObj.AddChildStructure(struct); 
+                MapIDToObj.put(ParentObj.StructureID, ParentObj);
+           end 
        end
     end
     
@@ -494,7 +386,7 @@ function PPlot2(Structs, Locs, LocLinks, scale_struct, VolumeName, varargin)
     ValidStructureObjs = MapIDToObj.toCellArray(); 
         
     disp('Jumping bad sections...'); 
-    for iStruct = 1:length(ValidStructureObjs)
+    parfor iStruct = 1:length(ValidStructureObjs)
            %disp(['iStruct' num2str(iStruct)]);
            structure_obj = ValidStructureObjs{iStruct};
 
@@ -535,10 +427,25 @@ function PPlot2(Structs, Locs, LocLinks, scale_struct, VolumeName, varargin)
 
            if(isempty(structure_obj) == false)
               structure_obj = structure_obj.UpdateMesh();
-              ValidStructureObjs{iStruct} = structure_obj;  
+              ValidStructureObjs{iStruct} = structure_obj;            
            end
         end
-
+        
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        %Remove all empty structures, in this case cells without
+        %annotations 
+        for iStruct = 1:length(ValidStructureObjs)
+           structure_obj = ValidStructureObjs{iStruct}; 
+           if(isempty(structure_obj.Verts))
+            disp(['Structure ' num2str(structure_obj.StructureID) ' has no annotations']);
+            MapIDToObj.remove(structure_obj.StructureID);
+            ValidStructureObjs{iStruct} = [];
+           end
+        end
+           
+        ValidStructureObjs = ValidStructureObjs(~cellfun('isempty',ValidStructureObjs));
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        
         disp('Cleaning Meshes...');
         parfor iStruct = 1:length(ValidStructureObjs)
            structure_obj = ValidStructureObjs{iStruct};
@@ -565,7 +472,8 @@ function PPlot2(Structs, Locs, LocLinks, scale_struct, VolumeName, varargin)
         disp('Calculate bounding boxes...');
         parfor iStruct = 1:length(ValidStructureObjs)
           structure_obj = ValidStructureObjs{iStruct};
-
+          
+          
            if(isempty(structure_obj) == false)
               structure_obj = structure_obj.CalculateBoundingBox();
               ValidStructureObjs{iStruct} = structure_obj;
@@ -590,7 +498,9 @@ function PPlot2(Structs, Locs, LocLinks, scale_struct, VolumeName, varargin)
     disp('Merging parallel computations into central hash table...'); 
     for iStruct = 1:length(ValidStructureObjs)
         structure_obj = ValidStructureObjs{iStruct};
-        MapIDToObj.put(structure_obj.StructureID, structure_obj);
+        if(~isempty(structure_obj))
+            MapIDToObj.put(structure_obj.StructureID, structure_obj);
+        end
     end
 
     if(~isempty(ColladaPath))
@@ -618,13 +528,10 @@ function PPlot2(Structs, Locs, LocLinks, scale_struct, VolumeName, varargin)
 
         %Write verticies
         disp('    Writing Collada geometry files...');
-        for iPID = 1:length(uniqueLocs)
-            PID = uniqueLocs(iPID);
+        for iPID = 1:length(StructureIDs)
+            PID = StructureIDs(iPID);
             structure_obj = MapIDToObj.get(PID);
             
-            iStruct = MapStructIDToIndex.get(PID);   
-            ParentID = Structs{iStruct, iParentID}; 
-
             if(isempty(structure_obj) == false)
               %Only create dae files for top level structures
               if(~structure_obj.HasParent)
@@ -635,7 +542,9 @@ function PPlot2(Structs, Locs, LocLinks, scale_struct, VolumeName, varargin)
                 
                 for(iChild = structure_obj.ChildList)
                     ChildObj = MapIDToObj.get(iChild);
-                    [GeometryDOM, ParentNode, Node] = ChildObj.UpdateColladaFile(GeometryDOM, ParentNode, structure_obj.ModelTranslation, MaterialFileName); 
+                    if(~isempty(ChildObj)) %Children with no annotations may have been removed
+                        [GeometryDOM, ParentNode, Node] = ChildObj.UpdateColladaFile(GeometryDOM, ParentNode, structure_obj.ModelTranslation, MaterialFileName);
+                    end
                 end
                 
                 xmlwrite(TargetPath, GeometryDOM); 
@@ -647,8 +556,8 @@ function PPlot2(Structs, Locs, LocLinks, scale_struct, VolumeName, varargin)
         disp('    Writing Collada scene file...');
         
         SceneBox = [];
-        for iPID = 1:length(uniqueLocs)
-           PID = uniqueLocs(iPID);
+        for iPID = 1:length(StructureIDs)
+           PID = StructureIDs(iPID);
            structure_obj = MapIDToObj.get(PID);
 
            if(isempty(structure_obj) == false)
@@ -666,8 +575,8 @@ function PPlot2(Structs, Locs, LocLinks, scale_struct, VolumeName, varargin)
                        ((SceneBox(2,2) - SceneBox(1,2)) / 2) + SceneBox(1,2) ...
                        ((SceneBox(2,3) - SceneBox(1,3)) / 2) + SceneBox(1,3)];
                    
-        for iPID = 1:length(uniqueLocs)
-            PID = uniqueLocs(iPID);
+        for iPID = 1:length(StructureIDs)
+            PID = StructureIDs(iPID);
             structure_obj = MapIDToObj.get(PID);
             if(isempty(structure_obj) == false)
                 if(~structure_obj.HasParent)
@@ -698,8 +607,8 @@ function PPlot2(Structs, Locs, LocLinks, scale_struct, VolumeName, varargin)
         %Write verticies
         disp('    Writing Verticies...');
         Offset = 0; 
-        for iPID = 1:length(uniqueLocs)
-            PID = uniqueLocs(iPID);
+        for iPID = 1:length(StructureIDs)
+            PID = StructureIDs(iPID);
             structure_obj = MapIDToObj.get(PID);
 
             if(isempty(structure_obj) == false)
@@ -711,8 +620,8 @@ function PPlot2(Structs, Locs, LocLinks, scale_struct, VolumeName, varargin)
 
         %Write normals
         disp('    Writing Normals...');
-        for iPID = 1:length(uniqueLocs)
-            PID = uniqueLocs(iPID);
+        for iPID = 1:length(StructureIDs)
+            PID = StructureIDs(iPID);
             structure_obj = MapIDToObj.get(PID);
 
             if(isempty(structure_obj) == false)
@@ -723,8 +632,8 @@ function PPlot2(Structs, Locs, LocLinks, scale_struct, VolumeName, varargin)
 
         %Write Faces
         disp('    Writing Faces...');
-        for iPID = 1:length(uniqueLocs)
-            PID = uniqueLocs(iPID);
+        for iPID = 1:length(StructureIDs)
+            PID = StructureIDs(iPID);
             structure_obj = MapIDToObj.get(PID);
 
             if(isempty(structure_obj) == false)
@@ -734,17 +643,7 @@ function PPlot2(Structs, Locs, LocLinks, scale_struct, VolumeName, varargin)
         end
 
         fclose(hFile); 
-
-
-%         %Code to write one .obj per structure
-%         for(iPID = 1:length(uniqueLocs))
-%            PID = uniqueLocs(iPID);
-%            structure_obj = MapIDToObj{PID};
-% 
-%            if(isempty(structure_obj) == false)
-%             MapIDToObj{PID} = structure_obj.WriteObjFile(ObjPath, MaterialFileName);
-%            end
-%         end
+        
     end
 
     %Don't create figure window if we are not rendering output
@@ -776,8 +675,8 @@ function PPlot2(Structs, Locs, LocLinks, scale_struct, VolumeName, varargin)
 
     disp('Rendering structures...'); 
     SceneBox = [];
-    for iPID = 1:length(uniqueLocs)
-       PID = uniqueLocs(iPID);
+    for iPID = 1:length(StructureIDs)
+       PID = StructureIDs(iPID);
        structure_obj = MapIDToObj.get(PID);
 
        if(isempty(structure_obj) == false)
@@ -809,8 +708,7 @@ function PPlot2(Structs, Locs, LocLinks, scale_struct, VolumeName, varargin)
     maxY = SceneBox(2,2);
     minZ = SceneBox(1,3);
     maxZ = SceneBox(2,3);
-    
-    
+     
     disp('Volume dimensions:');
     disp(['X ' num2str([minX maxX])]);
     disp(['Y ' num2str([minX maxX])]);
