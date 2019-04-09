@@ -415,7 +415,7 @@ function PPlot2(Structs, Locs, LocLinks, scale_struct, VolumeName, varargin)
     
 
     disp('Culling overlapping locations...'); 
-    for iStruct = 1:length(ValidStructureObjs)
+    parfor iStruct = 1:length(ValidStructureObjs)
        structure_obj = ValidStructureObjs{iStruct};
 
        if(isempty(structure_obj) == false)
@@ -429,9 +429,20 @@ function PPlot2(Structs, Locs, LocLinks, scale_struct, VolumeName, varargin)
              ValidStructureObjs{iStruct} = structure_obj;
        end
     end
+    
+    for iStruct = 1:length(ValidStructureObjs)
+       structure_obj = ValidStructureObjs{iStruct};
+       if(isempty(structure_obj) == false)
+        if(~structure_obj.HasValidLocs)
+           disp(['Structure ' num2str(structure_obj.StructureID) ' has no remaining locations after processing']);
+            MapIDToObj.remove(structure_obj.StructureID);
+            ValidStructureObjs{iStruct} = [];
+        end
+       end
+    end
 
     disp('Translate Models to local coordinates');
-    for iStruct = 1:length(ValidStructureObjs)
+    parfor iStruct = 1:length(ValidStructureObjs)
        structure_obj = ValidStructureObjs{iStruct};
 
        if(isempty(structure_obj) == false)
@@ -456,10 +467,12 @@ function PPlot2(Structs, Locs, LocLinks, scale_struct, VolumeName, varargin)
     %annotations 
     for iStruct = 1:length(ValidStructureObjs)
        structure_obj = ValidStructureObjs{iStruct}; 
-       if(isempty(structure_obj.Verts))
-        disp(['Structure ' num2str(structure_obj.StructureID) ' has no annotations']);
-        MapIDToObj.remove(structure_obj.StructureID);
-        ValidStructureObjs{iStruct} = [];
+       if(isempty(structure_obj) == false)
+        if(isempty(structure_obj.Verts))
+            disp(['Structure ' num2str(structure_obj.StructureID) ' has no annotations']);
+            MapIDToObj.remove(structure_obj.StructureID);
+            ValidStructureObjs{iStruct} = [];
+        end
        end
     end
 
