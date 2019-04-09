@@ -26,7 +26,9 @@ function PPlot2(Structs, Locs, LocLinks, scale_struct, VolumeName, varargin)
     DefaultAlpha = 1;
     ChildScalar = 1;
     InvertZ = 0;
-    
+    MinZ = NaN;
+    MaxZ = NaN;
+        
     optargin = size(varargin,2);
     stdargin = nargin - optargin;
     
@@ -37,7 +39,7 @@ function PPlot2(Structs, Locs, LocLinks, scale_struct, VolumeName, varargin)
        if(strcmpi(varargin{i},'SaveFrames') )
           SaveFrames = logical(varargin{i+1}); 
        elseif(strcmpi(varargin{i},'Debug'))
-           IsDebug = logical(varargin{i+1});
+          IsDebug = logical(varargin{i+1});
        elseif(strcmpi(varargin{i},'HideChildren') )
           HideChildren = logical(varargin{i+1}); 
        elseif(strcmpi(varargin{i},'HideLabels'))
@@ -45,7 +47,7 @@ function PPlot2(Structs, Locs, LocLinks, scale_struct, VolumeName, varargin)
        elseif(strcmpi(varargin{i},'ShowChildLabels'))
           ShowChildLabels = logical(varargin{i+1});
        elseif(strcmpi(varargin{i},'Threads'))
-           NumThreads = int(varargin{i+1}); 
+          NumThreads = int(varargin{i+1}); 
        elseif(strcmpi(varargin{i},'RenderMode') )
           RenderMode = int32(varargin{i+1}); 
        elseif(strcmpi(varargin{i},'ObjPath') )
@@ -58,6 +60,10 @@ function PPlot2(Structs, Locs, LocLinks, scale_struct, VolumeName, varargin)
           ChildScalar = varargin{i+1}; 
        elseif(strcmpi(varargin{i},'InvertZ') )
           InvertZ = varargin{i+1}; 
+       elseif(strcmpi(varargin{i},'MinZ') )
+          MinZ = varargin{i+1};
+       elseif(strcmpi(varargin{i},'MaxZ') )
+          MaxZ = varargin{i+1};
        elseif(strcmpi(varargin{i},'WindowSize'))
           WindowSizeCells = textscan(varargin{i+1}, '%d,%d');
           if(length(WindowSizeCells) ~= 2)
@@ -153,6 +159,14 @@ function PPlot2(Structs, Locs, LocLinks, scale_struct, VolumeName, varargin)
     end
   
     %Scale the coordinates, keeps a copy of the original data
+    if(~isnan(MinZ))
+        MinZ = scale_struct.Z.Value * MinZ;
+    end
+    
+    if(~isnan(MaxZ))
+        MaxZ = scale_struct.Z.Value * MaxZ;
+    end
+    
     Locs = ScaleLocations(Locs, scale_struct);
      
     for(iStruct = 1:numStructs)
@@ -401,99 +415,105 @@ function PPlot2(Structs, Locs, LocLinks, scale_struct, VolumeName, varargin)
     
 
     disp('Culling overlapping locations...'); 
-    parfor iStruct = 1:length(ValidStructureObjs)
+    for iStruct = 1:length(ValidStructureObjs)
        structure_obj = ValidStructureObjs{iStruct};
 
        if(isempty(structure_obj) == false)
-             structure_obj = structure_obj.CullOverlappingLocations(); 
+           
+             if(~isnan(MinZ) || ~isnan(MaxZ))
+                structure_obj = structure_obj.ApplyZLimits(MinZ, MaxZ);
+             end
+             
+             structure_obj = structure_obj.CullOverlappingLocations();
+             
              ValidStructureObjs{iStruct} = structure_obj;
        end
     end
 
-        disp('Translate Models to local coordinates');
-        parfor iStruct = 1:length(ValidStructureObjs)
+    disp('Translate Models to local coordinates');
+    for iStruct = 1:length(ValidStructureObjs)
+       structure_obj = ValidStructureObjs{iStruct};
+
+       if(isempty(structure_obj) == false)
+          structure_obj = structure_obj.CenterModel();
+          ValidStructureObjs{iStruct} = structure_obj; 
+       end
+    end
+
+
+    disp('Creating Meshes...');
+    parfor iStruct = 1:length(ValidStructureObjs)
+       structure_obj = ValidStructureObjs{iStruct};
+
+       if(isempty(structure_obj) == false)
+          structure_obj = structure_obj.UpdateMesh();
+          ValidStructureObjs{iStruct} = structure_obj;            
+       end
+    end
+
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %Remove all empty structures, in this case cells without
+    %annotations 
+    for iStruct = 1:length(ValidStructureObjs)
+       structure_obj = ValidStructureObjs{iStruct}; 
+       if(isempty(structure_obj.Verts))
+        disp(['Structure ' num2str(structure_obj.StructureID) ' has no annotations']);
+        MapIDToObj.remove(structure_obj.StructureID);
+        ValidStructureObjs{iStruct} = [];
+       end
+    end
+
+    ValidStructureObjs = ValidStructureObjs(~cellfun('isempty',ValidStructureObjs));
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+    disp('Cleaning Meshes...');
+    parfor iStruct = 1:length(ValidStructureObjs)
+       structure_obj = ValidStructureObjs{iStruct};
+
+       if(isempty(structure_obj) == false)
+          structure_obj = structure_obj.CleanMesh();
+          ValidStructureObjs{iStruct} = structure_obj; 
+       end
+    end
+
+    if ChildScalar ~= 1.0
+       disp('Scaling child objects...');
+       parfor iStruct = 1:length(ValidStructureObjs)
            structure_obj = ValidStructureObjs{iStruct};
 
-           if(isempty(structure_obj) == false)
-              structure_obj = structure_obj.CenterModel();
-              ValidStructureObjs{iStruct} = structure_obj; 
+           if ~isnan(structure_obj.ParentID)
+               structure_obj = structure_obj.ScaleModel(ChildScalar);
            end
-        end
+
+           ValidStructureObjs{iStruct} = structure_obj; 
+       end 
+    end
+
+    disp('Calculate bounding boxes...');
+    parfor iStruct = 1:length(ValidStructureObjs)
+      structure_obj = ValidStructureObjs{iStruct};
 
 
-        disp('Creating Meshes...');
-        parfor iStruct = 1:length(ValidStructureObjs)
-           structure_obj = ValidStructureObjs{iStruct};
+       if(isempty(structure_obj) == false)
+          structure_obj = structure_obj.CalculateBoundingBox();
+          ValidStructureObjs{iStruct} = structure_obj;
 
-           if(isempty(structure_obj) == false)
-              structure_obj = structure_obj.UpdateMesh();
-              ValidStructureObjs{iStruct} = structure_obj;            
-           end
-        end
-        
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        %Remove all empty structures, in this case cells without
-        %annotations 
-        for iStruct = 1:length(ValidStructureObjs)
-           structure_obj = ValidStructureObjs{iStruct}; 
-           if(isempty(structure_obj.Verts))
-            disp(['Structure ' num2str(structure_obj.StructureID) ' has no annotations']);
-            MapIDToObj.remove(structure_obj.StructureID);
-            ValidStructureObjs{iStruct} = [];
-           end
-        end
-           
-        ValidStructureObjs = ValidStructureObjs(~cellfun('isempty',ValidStructureObjs));
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        
-        disp('Cleaning Meshes...');
-        parfor iStruct = 1:length(ValidStructureObjs)
-           structure_obj = ValidStructureObjs{iStruct};
+          %Update our boundaries
+       end
+    end
 
-           if(isempty(structure_obj) == false)
-              structure_obj = structure_obj.CleanMesh();
-              ValidStructureObjs{iStruct} = structure_obj; 
-           end
-        end
-        
-        if ChildScalar ~= 1.0
-           disp('Scaling child objects...');
-           parfor iStruct = 1:length(ValidStructureObjs)
-               structure_obj = ValidStructureObjs{iStruct};
-               
-               if ~isnan(structure_obj.ParentID)
-                   structure_obj = structure_obj.ScaleModel(ChildScalar);
-               end
-               
-               ValidStructureObjs{iStruct} = structure_obj; 
-           end 
-        end
+    disp('Fixing Normals...');
+    parfor iStruct = 1:length(ValidStructureObjs)
+       structure_obj = ValidStructureObjs{iStruct};
 
-        disp('Calculate bounding boxes...');
-        parfor iStruct = 1:length(ValidStructureObjs)
-          structure_obj = ValidStructureObjs{iStruct};
-          
-          
-           if(isempty(structure_obj) == false)
-              structure_obj = structure_obj.CalculateBoundingBox();
-              ValidStructureObjs{iStruct} = structure_obj;
+       if(isempty(structure_obj) == false)
+          structure_obj = structure_obj.UpdateNormals();
+          ValidStructureObjs{iStruct} = structure_obj; 
+       end
+    end
 
-              %Update our boundaries
-           end
-        end
-
-        disp('Fixing Normals...');
-        parfor iStruct = 1:length(ValidStructureObjs)
-           structure_obj = ValidStructureObjs{iStruct};
-
-           if(isempty(structure_obj) == false)
-              structure_obj = structure_obj.UpdateNormals();
-              ValidStructureObjs{iStruct} = structure_obj; 
-           end
-        end
-        
-        ValidStructureObjs = gather(ValidStructureObjs);
-        Structs = gather(Structs); 
+    ValidStructureObjs = gather(ValidStructureObjs);
+    Structs = gather(Structs); 
     
     disp('Merging parallel computations into central hash table...'); 
     for iStruct = 1:length(ValidStructureObjs)

@@ -22,7 +22,7 @@ function [Structs, Locs, LocLinks] = FetchOData(endpoint, cellIDs, includeChildr
         ID = cellIDs(i);
         structure_url = [endpoint '/' 'Structures(' num2str(ID) ')/'];
         
-        structure_data = webread_odata(structure_url, options);
+        structure_data = webread(structure_url, options);
         
         WebStructs{i} = structure_data;
     end
@@ -30,12 +30,11 @@ function [Structs, Locs, LocLinks] = FetchOData(endpoint, cellIDs, includeChildr
     disp('Downloading locations for structures...');
         
     parfor i = 1:numIDs
-        
         ID = cellIDs(i);
         location_url = [endpoint '/Locations/?$filter=ParentID eq ' num2str(ID) '&$select=ID,ParentID,VolumeX,VolumeY,Z,Radius,X,Y'];
         structure_url = [endpoint '/' 'Structures(' num2str(ID) ')/'];
         location_link_url = [structure_url 'LocationLinks/?$select=A,B'];
-        location_data = webread_odata(location_url, options);
+        location_data = webread(location_url, options);
         
         if iscell(location_data.value) || isempty(location_data.value)
             continue;
@@ -43,7 +42,7 @@ function [Structs, Locs, LocLinks] = FetchOData(endpoint, cellIDs, includeChildr
                 
         Locs_out{i} = vertcat(location_data.value); 
         
-        location_link_data = webread_odata(location_link_url, options);
+        location_link_data = webread(location_link_url, options);
         
         if iscell(location_link_data.value) || isempty(location_link_data.value)
             continue;

@@ -55,7 +55,8 @@ classdef StructureObj < handle
         
         HasParent;
         NumLocs; 
-        Locs; 
+        Locs;
+        HasValidLocs;
     end
         
     properties (Constant = true)
@@ -151,6 +152,11 @@ classdef StructureObj < handle
         function numLocs = get.NumLocs(obj)
            numLocs = size(obj.Locs.ID,1);
            return;
+        end
+        
+        function hasValid = get.HasValidLocs(obj)
+            hasValid = obj.NumLocs ~= sum(obj.BadLocs);
+            return 
         end
         
         function Locs = get.Locs(obj)
@@ -387,6 +393,28 @@ classdef StructureObj < handle
             return;
         end
         
+        function obj = ApplyZLimits(obj, MinZ, MaxZ)
+            %Remove locations that are outside the Min/Max Z range
+            
+            for(iLoc = obj.NumLocs:-1:1) 
+               
+               [~, ~, Z] = obj.GetPosition(iLoc);
+               
+               if(~isnan(MinZ))
+                   if(Z < MinZ)
+                       obj.RemoveLocation(iLoc, false);
+                       continue;
+                   end
+               end
+               
+               if(~isnan(MaxZ))
+                   if(Z > MaxZ)
+                       obj.RemoveLocation(iLoc, false);
+                       continue;
+                   end
+               end
+            end
+        end
        
         function obj = CullOverlapping(obj, iObjs, iExclude)
             %Remove locations with two links (part of a process) who
@@ -418,7 +446,7 @@ classdef StructureObj < handle
 
                        if(X == AX && Y == AY && Z == AZ)
                            %FindGoodLinks(obj, iLoc, iExcludeLocs, KnownGoodLinks, iSearched)
-                           RemoveLocation(obj, iLink);
+                           RemoveLocation(obj, iLink, true);
                            break;
                        end
                    end
@@ -455,11 +483,11 @@ classdef StructureObj < handle
                        
                        numLinksOnAdjacent = length(obj.Links{iAdjacentLoc}(:,1));
                        if numLinksOnAdjacent == 2
-                           obj.RemoveLocation(iAdjacentLoc);
+                           obj.RemoveLocation(iAdjacentLoc, true);
                        elseif (numLinksOnAdjacent == 1 || numLinksOnAdjacent > 2)
                            %We shouldn't remove terminals or endpoints.  So
                            %remove ourselves
-                           obj.RemoveLocation(iLoc);
+                           obj.RemoveLocation(iLoc, true);
                            break;  
                        end
                    end
@@ -474,7 +502,7 @@ classdef StructureObj < handle
                    %my primitive outlier detector
                    if(min(LinkDistance) < minLinkDistance)
 
-                       RemoveLocation(obj, iLoc);
+                       RemoveLocation(obj, iLoc, true);
 %                        
 %                        for iLinkUpdate = 1:length(iLinked)
 %                             %FindGoodLinks(obj, iLoc, iExcludeLocs, KnownGoodLinks, iSearched)
@@ -490,7 +518,7 @@ classdef StructureObj < handle
                end
             end
         end
-        
+                
         %Remove locations within the radius of adjacent sections
         function obj = CullOverlappingLocations(obj)
             
@@ -733,6 +761,10 @@ classdef StructureObj < handle
             %Put the center of the model at 0,0
             %Calculate the bounding box using the valid locations
             
+            if(~obj.HasValidLocs)
+                return 
+            end
+            
             GoodLocs = ~obj.BadLocs;
             Centers = [obj.Locs.X(GoodLocs) obj.Locs.Y(GoodLocs), obj.Locs.Z(GoodLocs)];%(GoodLocs,[obj.iX obj.iY obj.iZ]);
             
@@ -870,14 +902,16 @@ classdef StructureObj < handle
             end
         end
         
-         function obj = RemoveLocation(obj, iLoc)
+         function obj = RemoveLocation(obj, iLoc, PreserveLinks)
             %Removes a location from our structure.  Mark the location as
             %bad.  Update location links to skip the removed location
+            %    PreserveLinks - Set to true if links should be relocated
+            %    to remaining locations.  If false the links are removed.
             
             %iLinked = obj.Links{iLoc}(:,1);
             
             GoodLinks = GetLocationLinks(obj, iLoc);
-            
+                       
             %GoodLinks = obj.FindGoodLinks(iLoc, [iLoc], setdiff(iLinked, iLinked(iLink)), []);
             
             %obj.Links{iLinked(iLink)} = GoodLinks;
@@ -888,14 +922,24 @@ classdef StructureObj < handle
                 %FindGoodLinks(obj, iLoc, iExcludeLocs, KnownGoodLinks, iSearched)
                 LocToUpdateLinks = GetLocationLinks(obj, iLocToUpdate);
                 %Remove the location we are removing from the list
-                UpdatedLinks = setdiff([LocToUpdateLinks;GoodLinks], [iLoc; iLocToUpdate]);
+                UpdatedLinks = [];
+                if(PreserveLinks)
+                    UpdatedLinks = setdiff([LocToUpdateLinks;GoodLinks], [iLoc; iLocToUpdate]);
+                else
+                    UpdatedLinks = setdiff([LocToUpdateLinks], [iLoc]);
+                end
+                
                 %Add the locations linked by the location we are removing
                 %to the list
                 UpdatedLinks = unique(UpdatedLinks);
                 
                 %Add columns for additional data
-                UpdatedLinks = cat(2, UpdatedLinks, zeros(length(UpdatedLinks),2));
-
+                if(~isempty(UpdatedLinks))
+                    UpdatedLinks = cat(2, UpdatedLinks, zeros(length(UpdatedLinks),2));
+                else
+                    UpdatedLinks = [];
+                end
+                
                 obj.Links{iLocToUpdate} = UpdatedLinks;
                 obj.LocLinkCount(iLocToUpdate) = size(UpdatedLinks,1);                     
             end

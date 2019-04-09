@@ -14,7 +14,7 @@ function [ ChildIDs ] = FetchODataChildStructures( endpoint, cellIDs, recurse  )
     parfor i = 1:numIDs
         cellID = cellIDs(i);
         query_url = [endpoint '/Structures(' num2str(cellID) ')/Children?$select=ID&$expand=Children($select=ID)' ];
-        child_data{i} = webread_odata(query_url, options);
+        child_data{i} = webread(query_url, options);
     end
 
     totalChildren = 0;

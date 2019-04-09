@@ -1,5 +1,5 @@
 <deployment-project plugin="plugin.ezdeploy" plugin-version="1.0">
-  <configuration build-checksum="839585083" file="C:\Src\Git\VikingPlot\VikingPlot.prj" location="C:\Src\Git\VikingPlot" name="VikingPlot" preferred-package-location="C:\Src\Git\VikingPlot\VikingPlot\for_redistribution" preferred-package-type="package.type.exe" target="target.ezdeploy.standalone" target-name="Application Compiler">
+  <configuration build-checksum="3996273110" file="C:\src\git\VikingPlot\VikingPlot.prj" location="C:\src\git\VikingPlot" name="VikingPlot" preferred-package-location="C:\src\git\VikingPlot\VikingPlot\for_redistribution" preferred-package-type="package.type.exe" target="target.ezdeploy.standalone" target-name="Application Compiler">
     <param.appname>VikingPlot</param.appname>
     <param.icon />
     <param.icons />
@@ -36,7 +36,12 @@
     <param.native.matlab>false</param.native.matlab>
     <param.checkbox>false</param.checkbox>
     <param.example />
-    <param.help.text />
+    <param.help.text>Syntax 
+	 VikingPlot -? 
+	 VikingPlot varargin 
+ Input Arguments 
+	 -?  print help on how to use the application 
+	 varargin  input arguments</param.help.text>
     <unset>
       <param.icon />
       <param.icons />
@@ -44,6 +49,7 @@
       <param.guid />
       <param.installpath.combo />
       <param.logo />
+      <param.install.notes />
       <param.target.install.notes />
       <param.intermediate />
       <param.files.only />
@@ -62,7 +68,6 @@
       <param.native.matlab />
       <param.checkbox />
       <param.example />
-      <param.help.text />
     </unset>
     <fileset.main>
       <file>${PROJECT_ROOT}\VikingPlot.m</file>
@@ -131,17 +136,16 @@
       <file>${PROJECT_ROOT}\ScalarForUnitConversion.m</file>
       <file>${PROJECT_ROOT}\ScalarForUnitToMeters.m</file>
       <file>${PROJECT_ROOT}\ScaleLocations.m</file>
-      <file>${PROJECT_ROOT}\webread_odata.m</file>
       <file>${PROJECT_ROOT}\Window.m</file>
     </fileset.depfun>
     <build-deliverables>
-      <file location="${PROJECT_ROOT}\VikingPlot\for_testing" name="splash.png" optional="false">C:\Src\Git\VikingPlot\VikingPlot\for_testing\splash.png</file>
-      <file location="${PROJECT_ROOT}\VikingPlot\for_testing" name="VikingPlot.exe" optional="false">C:\Src\Git\VikingPlot\VikingPlot\for_testing\VikingPlot.exe</file>
-      <file location="${PROJECT_ROOT}\VikingPlot\for_testing" name="readme.txt" optional="true">C:\Src\Git\VikingPlot\VikingPlot\for_testing\readme.txt</file>
+      <file location="${PROJECT_ROOT}\VikingPlot\for_testing" name="splash.png" optional="false">C:\src\git\VikingPlot\VikingPlot\for_testing\splash.png</file>
+      <file location="${PROJECT_ROOT}\VikingPlot\for_testing" name="VikingPlot.exe" optional="false">C:\src\git\VikingPlot\VikingPlot\for_testing\VikingPlot.exe</file>
+      <file location="${PROJECT_ROOT}\VikingPlot\for_testing" name="readme.txt" optional="true">C:\src\git\VikingPlot\VikingPlot\for_testing\readme.txt</file>
     </build-deliverables>
     <workflow />
     <matlab>
-      <root>C:\Program Files\MATLAB\R2017b</root>
+      <root>C:\Program Files\MATLAB\R2019a</root>
       <toolboxes />
     </matlab>
     <platform>

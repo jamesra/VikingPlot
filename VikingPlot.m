@@ -1,7 +1,7 @@
 function VikingPlot( varargin ) 
 
     disp('');
-    disp('Version: 1.0.2017.02.20');
+    disp('Version: 1.0.2019.04.09');
     disp('');
 
     dbstop if error
@@ -32,6 +32,10 @@ function VikingPlot( varargin )
     Query = {};
     IDFileNames = {};
     InvertZ = 0;
+    MinZ = NaN;
+    MaxZ = NaN;
+    
+    
     
     iNextQuery = 1;
     iNextIDFile = 1;
@@ -133,6 +137,12 @@ function VikingPlot( varargin )
               SkipNextArgument = true; 
            elseif(strcmpi(varargin{iArg},'-z'))
               InvertZ = 1;
+           elseif(strcmpi(varargin{iArg},'-MinZ') )
+              MinZ = str2num(varargin{iArg+1});
+              SkipNextArgument = true; 
+           elseif(strcmpi(varargin{iArg},'-MaxZ') )
+              MaxZ = str2num(varargin{iArg+1});
+              SkipNextArgument = true; 
            elseif(strcmpi(varargin{iArg}, '-All'))
               ShowAll = 1; 
               if(~isempty(CellIDs))
@@ -226,7 +236,9 @@ function VikingPlot( varargin )
                'ScaleChildren', ChildScalar,...
                'DefaultAlpha', DefaultAlpha,...
                'ColladaPath', ColladaPath, ...
-               'InvertZ', InvertZ); 
+               'InvertZ', InvertZ, ...
+               'MinZ', MinZ, ...
+               'MaxZ', MaxZ); 
     else
         PPlot2(Structs, Locs, LocLinks, scale, Database, ...
                'SaveFrames', SaveFrames, ...
@@ -240,7 +252,9 @@ function VikingPlot( varargin )
                'Debug', IsDebug, ...
                'WindowSize', WindowSize, ...
                'ColladaPath', ColladaPath, ...
-               'InvertZ', InvertZ); 
+               'InvertZ', InvertZ, ...
+               'MinZ', MinZ, ...
+               'MaxZ', MaxZ); 
     end
 end
 
@@ -274,6 +288,8 @@ function PrintUsage()
        disp('  -IDFiles, -f      Load structure IDs from one or more text files, one ID per line.');
        disp('                    Multiple filenames can be passed, either delimited by spaces or each');
        disp('                    proceeded by a -IDFiles flag.');
+       disp('  -MinZ             Do not render locations on section numbers below this Z value'); 
+       disp('  -MaxZ             Do not render locations on section numbers above this Z value'); 
        disp('  -ObjPath          Export an .obj file for import into other 3D environments.');
        disp('  -Origin           Origin of the rendered volume.  Set this to do multiple');
        disp('                      renderings with cells in the same relative positions.  If');

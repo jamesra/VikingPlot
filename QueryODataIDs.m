@@ -7,7 +7,7 @@ function [ IDs, url] = QueryODataIDs( endpoint, query )
     disp(['Executing OData query: ' url]);
     
     try 
-        data = webread_odata(url, ODataWebOptions());
+        data = webread(url, ODataWebOptions());
     catch ME
         IDs = [];
         switch ME.identifier
