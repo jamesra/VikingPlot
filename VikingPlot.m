@@ -31,7 +31,7 @@ function VikingPlot( varargin )
     ColladaPath = []; %The path to write .dae files to, if not specified .dae files are not written
     Query = {};
     IDFileNames = {};
-    InvertZ = 0;
+    InvertZ = false;
     MinZ = NaN;
     MaxZ = NaN;
     
@@ -136,7 +136,9 @@ function VikingPlot( varargin )
               ColladaPath = varargin{iArg+1}; 
               SkipNextArgument = true; 
            elseif(strcmpi(varargin{iArg},'-z'))
-              InvertZ = 1;
+              InvertZ = true;
+           elseif(strcmpi(varargin{iArg},'-InvertZ'))
+              InvertZ = true;
            elseif(strcmpi(varargin{iArg},'-MinZ') )
               MinZ = str2num(varargin{iArg+1});
               SkipNextArgument = true; 
@@ -288,8 +290,9 @@ function PrintUsage()
        disp('  -IDFiles, -f      Load structure IDs from one or more text files, one ID per line.');
        disp('                    Multiple filenames can be passed, either delimited by spaces or each');
        disp('                    proceeded by a -IDFiles flag.');
-       disp('  -MinZ             Do not render locations on section numbers below this Z value'); 
-       disp('  -MaxZ             Do not render locations on section numbers above this Z value'); 
+       disp('  -InvertZ          Flip the Z axis.');
+       disp('  -MinZ             Do not render locations on section numbers below this Z value.'); 
+       disp('  -MaxZ             Do not render locations on section numbers above this Z value.'); 
        disp('  -ObjPath          Export an .obj file for import into other 3D environments.');
        disp('  -Origin           Origin of the rendered volume.  Set this to do multiple');
        disp('                      renderings with cells in the same relative positions.  If');
