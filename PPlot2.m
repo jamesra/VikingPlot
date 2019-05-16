@@ -152,12 +152,7 @@ function PPlot2(Structs, Locs, LocLinks, scale_struct, VolumeName, varargin)
 %     scale_struct.X.Value = .001; 
 %     scale_struct.Y.Value = .001; 
 %     scale_struct.Z.Value = .045; 
-    
-    
-    if InvertZ
-        scale_struct.Z.Value = scale_struct.Z.Value * -1;
-    end
-  
+     
     %Scale the coordinates, keeps a copy of the original data
     if(~isnan(MinZ))
         MinZ = scale_struct.Z.Value * MinZ;
@@ -165,6 +160,12 @@ function PPlot2(Structs, Locs, LocLinks, scale_struct, VolumeName, varargin)
     
     if(~isnan(MaxZ))
         MaxZ = scale_struct.Z.Value * MaxZ;
+    end
+    
+    if(MinZ > MaxZ)
+        temp = MinZ;
+        MinZ = MaxZ;
+        MaxZ = temp;
     end
     
     Locs = ScaleLocations(Locs, scale_struct);
@@ -685,7 +686,7 @@ function PPlot2(Structs, Locs, LocLinks, scale_struct, VolumeName, varargin)
     end
 
     disp('Creating figure...'); 
-    [hFig, hAxes] = CreateRenderingFigure();
+    [hFig, hAxes] = CreateRenderingFigure(WindowSize, renderer, InvertZ);
     
 % 
 %     hFig = figure('Units', 'Pixels', ...
@@ -700,11 +701,6 @@ function PPlot2(Structs, Locs, LocLinks, scale_struct, VolumeName, varargin)
 %                   'ZColor', [.5 .5 .5], ...
 %                   'Position', [0 0 1 1], ...
 %                   'DataAspectRatio', [1 1 1]);    
-
-    hold on; 
-
-    lightangle(45,30);
-    lightangle(225,30);
 
     disp('Rendering structures...'); 
     SceneBox = [];
@@ -759,9 +755,9 @@ function PPlot2(Structs, Locs, LocLinks, scale_struct, VolumeName, varargin)
 %                            'String', 'Y');
 %     set(get(gca,'ZLabel'), 'Color', [0.5 0.5 0.5], ...
 %                            'String', 'IPL Depth (nm)'); 
-    set(gca, 'YTick', []); 
-    camroll(180);
-    
+%     set(gca, 'YTick', []); 
+    %camroll(180);
+      
 %    title('Laminae of Inner Nuclear Layer Cells'); 
 %     
 

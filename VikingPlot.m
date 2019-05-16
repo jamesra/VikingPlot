@@ -1,7 +1,7 @@
 function VikingPlot( varargin ) 
 
     disp('');
-    disp('Version: 1.0.2019.04.09');
+    disp('Version: 1.0.2019.04.23');
     disp('');
 
     dbstop if error
@@ -31,7 +31,7 @@ function VikingPlot( varargin )
     ColladaPath = []; %The path to write .dae files to, if not specified .dae files are not written
     Query = {};
     IDFileNames = {};
-    InvertZ = false;
+    InvertZ = true;
     MinZ = NaN;
     MaxZ = NaN;
     
@@ -136,9 +136,9 @@ function VikingPlot( varargin )
               ColladaPath = varargin{iArg+1}; 
               SkipNextArgument = true; 
            elseif(strcmpi(varargin{iArg},'-z'))
-              InvertZ = true;
+              InvertZ = false;
            elseif(strcmpi(varargin{iArg},'-InvertZ'))
-              InvertZ = true;
+              InvertZ = false;
            elseif(strcmpi(varargin{iArg},'-MinZ') )
               MinZ = str2num(varargin{iArg+1});
               SkipNextArgument = true; 

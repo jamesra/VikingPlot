@@ -1,9 +1,9 @@
 <deployment-project plugin="plugin.ezdeploy" plugin-version="1.0">
-  <configuration build-checksum="3996273110" file="C:\src\git\VikingPlot\VikingPlot.prj" location="C:\src\git\VikingPlot" name="VikingPlot" preferred-package-location="C:\src\git\VikingPlot\VikingPlot\for_redistribution" preferred-package-type="package.type.exe" target="target.ezdeploy.standalone" target-name="Application Compiler">
+  <configuration build-checksum="2565003330" file="C:\src\git\VikingPlot\VikingPlot.prj" location="C:\src\git\VikingPlot" name="VikingPlot" preferred-package-location="C:\src\git\VikingPlot\VikingPlot\for_redistribution" preferred-package-type="package.type.exe" target="target.ezdeploy.standalone" target-name="Application Compiler">
     <param.appname>VikingPlot</param.appname>
     <param.icon />
     <param.icons />
-    <param.version>1.07</param.version>
+    <param.version>1.09</param.version>
     <param.authnamewatermark>James Anderson</param.authnamewatermark>
     <param.email>james.r.anderson@utah.edu</param.email>
     <param.company>University of Utah</param.company>
@@ -11,7 +11,7 @@
     <param.description />
     <param.screenshot>${PROJECT_ROOT}\VikingPlotThumbnail.png</param.screenshot>
     <param.guid />
-    <param.installpath.string>VikingPlot-1.03.2016.09.23</param.installpath.string>
+    <param.installpath.string>VikingPlot-1.03.2019.04.09</param.installpath.string>
     <param.installpath.combo>option.installpath.programfiles</param.installpath.combo>
     <param.logo />
     <param.install.notes />
@@ -45,6 +45,9 @@
     <unset>
       <param.icon />
       <param.icons />
+      <param.authnamewatermark />
+      <param.email />
+      <param.company />
       <param.description />
       <param.guid />
       <param.installpath.combo />
