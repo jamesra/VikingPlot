@@ -269,8 +269,8 @@ classdef StructureObj < handle
                 objLinks = obj.Links{iObj}; 
                 
                 iObjA = iObj;
-                iObjB = objLinks(:,1);
-                iObjB = iObjB( iObjB < iObjA); %Remove objects with an ID number less than ours, prevents duplicate measurement.  Duplicates throw off std deviation.
+                iObjA_LinkedIDs = objLinks(:,1);
+                iObjB = iObjA_LinkedIDs( iObjA_LinkedIDs > iObjA); %Remove objects with an ID number less than ours, prevents duplicate measurement.  Duplicates throw off std deviation.
                 
                 if isempty(iObjB)
                     continue;
@@ -299,22 +299,47 @@ classdef StructureObj < handle
             end
             
             %%Determine median and standard deviation of link length
-            Distances = full(DistanceMatrix(DistanceMatrix > 0));
+            [iA,iB,Distances] = find(DistanceMatrix)
+            %Distances = full(DistanceMatrix(DistanceMatrix > 0));
             distStd = std(Distances);
             distMedian = median(Distances); 
             
-            iOutliers = abs( Distances - distMedian) > (distStd*3.5);
-            
+            iOutliers = abs( Distances - distMedian) > (distStd*10);
+            numOutliers = sum(iOutliers);
+                        
             if(sum(iOutliers) > 0)
                disp('*** Found extreme distance between two linked locations ***');
                disp(['Std. Dev.: ' num2str(distStd)]);
                disp(['Median   : ' num2str(distMedian)]);
                %disp(Distances(iOutliers > 0));
+               
+               output = [obj.Locs.ID(iA(iOutliers)) obj.Locs.ID(iB(iOutliers)) Distances(iOutliers)];
+               disp('    A_ID B_ID Distance')
+               disp(num2str(output));
             end
             
             %TODO: Remove the outliers
-                        
-                        
+            iObjA_Outliers = iA(iOutliers);
+            iObjB_Outliers = iB(iOutliers);
+            
+            for(iOutlier = 1:numOutliers)
+                iObjA = iObjA_Outliers(iOutlier);
+                iObjB = iObjB_Outliers(iOutlier);
+                 
+                objLinksA = obj.Links{iObjA};
+                iObjA_LinkedIDs = objLinksA(:,1) ~= iObjB;
+                new_iObjA_LinkedIDs = objLinksA(iObjA_LinkedIDs,:);
+                obj.Links{iObjA} = new_iObjA_LinkedIDs;
+                [num_ObjA_Links,~] = size(new_iObjA_LinkedIDs);
+                obj.LocLinkCount(iObjA) = num_ObjA_Links;
+                
+                objLinksB = obj.Links{iObjB};
+                iObjB_LinkedIDs = objLinksB(:,1) ~= iObjA;
+                new_iObjB_LinkedIDs = objLinksB(iObjB_LinkedIDs,:);
+                obj.Links{iObjB} = new_iObjB_LinkedIDs;
+                [num_ObjB_Links,~] = size(new_iObjB_LinkedIDs);
+                obj.LocLinkCount(iObjB) = num_ObjB_Links;
+            end            
         end
 
         

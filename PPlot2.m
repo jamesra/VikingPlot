@@ -408,7 +408,7 @@ function PPlot2(Structs, Locs, LocLinks, scale_struct, VolumeName, varargin)
            %disp(structure_obj);
            if(isempty(structure_obj) == false)
                  structure_obj = structure_obj.EndAddLinks(); 
-                 structure_obj = structure_obj.CullVeryLongLinks();
+    %             structure_obj = structure_obj.CullVeryLongLinks();
     %             structure_obj = structure_obj.JumpBadLinks(); 
                  ValidStructureObjs{iStruct} = structure_obj;
            end
