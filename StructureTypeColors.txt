@@ -1,29 +1,49 @@
-%TypeID Red Green Blue Alpha
-3 1 0 0 0.5 %Blood Vessel
-28 1 1 0 0.5  %Gap junction
-34 1 0 0 0.5  %Conventional Presynapse
-35 .051 .027 .549 0.5 %Postsynapse
-73 0 .580 .267 0.5 %Ribbon
-81 0 0 1 0.5 %Organized SER
-85 1 1 1 0.5 %Adherens
-181 0 0 1 0.5 %Cistern Pre
-182 0 0 1 0.5 %Cistern Post
-183 0 0 1 0.5 %Cilium
-189 .051 .027 .549 0.5 %BC Conventional
-219 0 0 1 0.5 %Multicistern
-220 0 0 1 0.5 %Endocytosis
-225 0 0 1 0.5 %multivesicular body
-226 0 0 1 0.5 %Ribosome patch
-227 0 0 1 0.5 %Ribbon CLuster
-229 0 0 1 0.5 %Touch
-230 0 0 1 0.5 %Loop
-232 0 0 1 0.5 %Polysomes
-236 0 0 1 0.5 %Plaque
-237 0 0 1 0.5 %Axon
-240 0 0 1 0.5 %Plaque-like Pre
-241 0 0 1 0.5 %Plaque-like Post
-243 0 0 1 0.5 %Neuroglial adherens
-244 1 1 1 0.5 %Unknown
-245 0 0 1 0.5 %Nucleolus
-246 0 0 1 0.5 %Mitochondria
-253 1 0 1 0.5 %Annular Gap junction
+28 1 1 0 0 %Gap junction
+34 0 .447 1 0 %Conventional Presynapse
+35 1 0 0 0 %Postsynaptic density
+73 0 1 0 0 %Ribbon
+85 1 0 1 0 %Adherens Junction
+189 0 .824 .808 0 %BC Conventional Presynapse
+244 1 1 0 0 %Unknown
+
+
+%VikingView%
+
+
+81 0 0 1 0 %Organized SER
+181 0 0 1 0 %Cistern Pre
+182 0 0 1 0 %Cistern Post
+183 0 0 1 0 %Cilium
+219 0 0 0 0 %Multi Plaque-like
+220 0 0 1 0 %Endocytosis
+247 0 0 0 0 %Caveola
+225 0 0 1 0 %multivesicular body
+226 0 0 1 0 %Ribosome patch
+227 0 0 1 0 %Ribbon CLuster
+229 0 0 1 0 %Touch
+230 0 0 1 0 %Loop
+232 0 0 1 0 %Polysomes
+236 0 0 1 0 %Plaque
+237 0 0 0 0 %Axon
+240 0 0 1 0 %Plaque-like Pre
+241 0 0 1 0 %Plaque-like Post
+243 0 0 1 0 %Neuroglial adherens
+245 0 0 0 0 %Nucleolus
+246 0 0 1 0 %Mitochondria
+247 0 0 0 0 %Caveola
+248 0 0 0 0 %Nuclear Filament
+249 0 0 0 0 %Golgi Plaque
+250 0 0 0 0 %Golgi Normal
+252 0 0 0 0 %Lysosomes
+253 0 0 0 0 %Annular Gap junction
+255 0 0 0 0 %Rootlet
+256 0 0 0 0 %CH Boundary
+257 0 0 0 0 %Distal Junction
+258 0 0 0 0 %Flat Contact
+259 0 0 0 0 %Bubbles/Swirls
+260 0 0 0 0 %Peri GJ Adherens
+261 0 0 0 0 %Caveola String
+262 0 0 0 0 %Coated Pits
+
+
+   

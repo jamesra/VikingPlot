@@ -1,7 +1,7 @@
 function VikingPlot( varargin ) 
 
     disp('');
-    disp('Version: 1.0.2019.04.23');
+    disp('Version: 1.0.2019.07.26');
     disp('');
 
     dbstop if error
